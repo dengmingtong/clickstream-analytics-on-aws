@@ -1,0 +1,28 @@
+[sources.nginx_http_post_%%SUFFIX%%]
+type = "http_server"
+address = "0.0.0.0:%%VECTOR_PORT%%"
+strict_path = false
+headers = [ "X_Uri", "X_User_Agent", "X_Forwarded_For", "X_Date", "X_Request_ID", "X_Method"]
+query_parameters = [ "platform", "appId", "compression", "fakeIp" ]
+method = "POST"
+encoding = "binary"
+
+[transforms.json_parser_%%SUFFIX%%]
+inputs = ["nginx_http_post_%%SUFFIX%%"]
+type   = "remap"
+source = '''
+.date = del(.X_Date)
+.uri = del(.X_Uri)
+.ua = del(.X_User_Agent)
+if get_env_var!("DEV_MODE") == "Yes" && !is_null(.fakeIp) {
+  .ip = del(.fakeIp)
+} else {
+  .ip = del(.X_Forwarded_For)
+}
+.rid = del(.X_Request_ID)
+.method = del(.X_Method)
+.data = del(.message)
+.ingest_time = to_unix_timestamp(now()) * 1000
+.server_ingest_time = to_unix_timestamp(now()) * 1000
+'''
+

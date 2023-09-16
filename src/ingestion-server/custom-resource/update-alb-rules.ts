@@ -32,6 +32,7 @@ export interface UpdateAlbRulesCustomResourceProps {
   endpointPath: string;
   domainName?: string;
   protocol: string;
+  customAdditionInfo: string;
 }
 
 export function updateAlbRulesCustomResource(
@@ -58,6 +59,7 @@ export function updateAlbRulesCustomResource(
       endpointPath: props.endpointPath,
       domainName: props.domainName,
       protocol: props.protocol,
+      customAdditionInfo: props.customAdditionInfo,
     },
   });
   return { customResource: cr, fn };

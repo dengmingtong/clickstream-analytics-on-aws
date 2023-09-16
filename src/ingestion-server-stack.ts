@@ -79,6 +79,7 @@ interface IngestionServerNestStackProps extends StackProps {
   readonly projectId: string;
   readonly appIds: string;
   readonly clickStreamSDK: string;
+  readonly customAdditionInfo: string;
 
   // authentication parameters
   readonly enableAuthentication?: string;
@@ -249,6 +250,7 @@ export class IngestionServerNestedStack extends NestedStack {
       appIds: props.appIds,
       clickStreamSDK: props.clickStreamSDK,
       workerStopTimeout: props.workerStopTimeout,
+      customAdditionInfo: props.customAdditionInfo,
     };
 
     const ingestionServer = new IngestionServer(
@@ -336,6 +338,7 @@ export class IngestionServerStack extends Stack {
         workerStopTimeoutParam,
         enableAuthenticationParam,
         authenticationSecretArnParam,
+        customAdditionInfoParam,
       },
     } = createStackParameters(this, props);
 
@@ -370,6 +373,7 @@ export class IngestionServerStack extends Stack {
       clickStreamSDK: clickStreamSDKParam.valueAsString,
       appIds: appIdsParam.valueAsString,
       workerStopTimeout: workerStopTimeoutParam.valueAsNumber,
+      customAdditionInfo: customAdditionInfoParam.valueAsString,     
     };
 
     let nestStackProps = { ... nestStackCommonProps };
@@ -407,7 +411,6 @@ export class IngestionServerStack extends Stack {
         ...nestStackProps,
         kafkaBrokers: kafkaParams.kafkaBrokersParam.valueAsString,
         kafkaTopic: kafkaParams.kafkaTopicParam.valueAsString,
-
       };
 
       const mskConditionsAndProps = createMskConditions(this, kafkaParams);

@@ -80,6 +80,25 @@ export class KafkaS3SinkConnectorStack extends Stack {
       type: 'List<AWS::EC2::Subnet::Id>',
     });
 
+    const customAdditionInfoParam = new CfnParameter(
+      this,
+      'CustomAdditionInfo',
+      {
+        description: 'The custom addition info including domain, endpoint path and topics.',
+        type: 'String',
+        default: '',
+      },
+    ); 
+    const timeZoneParam = new CfnParameter(
+      this,
+      'TimeZone',
+      {
+        description: 'The time zone for data partition.',
+        type: 'String',
+        default: 'UTC',
+      },
+    );        
+
     const kafkaBrokersParam = Parameters.createKafkaBrokersParameter(this, 'KafkaBrokers');
     const kafkaTopicParam = Parameters.createKafkaTopicParameter(this, 'KafkaTopic');
     const mskClusterNameParam = Parameters.createMskClusterNameParameter(this, 'MskClusterName');
@@ -195,6 +214,8 @@ export class KafkaS3SinkConnectorStack extends Stack {
       customConnectorConfiguration:
         customConnectorConfigurationParam.valueAsString,
       flushSize: flushSizeParam.valueAsNumber,
+      customAdditionInfo: customAdditionInfoParam.valueAsString,
+      timeZone: timeZoneParam.valueAsString,
     };
     new KafkaS3SinkConnector(this, 'KafkaS3SinkConnector', p);
     addCdkNagToStack(this);

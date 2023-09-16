@@ -81,6 +81,8 @@ interface ResourcePropertiesType {
   rotateIntervalMS: string;
   customConnectorConfiguration: string;
   stackShortId: string;
+  customAdditionInfo: string;
+  timeZone: string;
 }
 
 type ResourceEvent = CloudFormationCustomResourceEvent;
@@ -346,10 +348,22 @@ function getConnectorConfiguration(
   props: ResourcePropertiesType,
 ): Record<string, string> {
   // https://docs.confluent.io/kafka-connectors/s3-sink/current/configuration_options.html#connector
+  let topics = props.kafkaTopics;
+  if (props.customAdditionInfo) {
+    const additionInfoArray = props.customAdditionInfo.split(",");
+    topics = '';
+    for (const additionInfo of additionInfoArray) {
+      const topicList = additionInfo.split('#')[2].split(':');
+      for (const topic of topicList) {
+        topics = `${topics},${topic}`
+      }
+    }
+    topics = topics.slice(1);
+  }
   let configuration: Record<string, string> = {
     'tasks.max': '2',
     'connector.class': 'io.confluent.connect.s3.S3SinkConnector',
-    'topics': `${props.kafkaTopics}`,
+    'topics': `${topics}`,
     's3.region': `${region}`,
     's3.bucket.name': `${props.dataS3Bucket}`,
     'topics.dir': `${props.dataS3Prefix.slice(0, -1)}`,
@@ -364,7 +378,7 @@ function getConnectorConfiguration(
       'io.confluent.connect.storage.partitioner.TimeBasedPartitioner',
     'path.format': "'year'=YYYY/'month'=MM/'day'=dd/'hour'=HH",
     'partition.duration.ms': '60000',
-    'timezone': 'UTC',
+    'timezone': `${props.timeZone}`,
     'locale': 'en-US',
     'key.converter': 'org.apache.kafka.connect.storage.StringConverter',
     'value.converter': 'org.apache.kafka.connect.json.JsonConverter',

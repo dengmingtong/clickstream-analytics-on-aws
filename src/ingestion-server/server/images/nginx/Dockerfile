@@ -7,6 +7,9 @@ ENV SERVER_CORS_ORIGIN='*'
 ENV NGINX_WORKER_CONNECTIONS='1024'
 
 COPY ./config/nginx.conf /etc/nginx/nginx.conf
+COPY ./config/nginx-path-snap.txt /etc/nginx/nginx-path-snap.txt
+COPY ./config/nginx-server-snap.txt /etc/nginx/nginx-server-snap.txt
+COPY ./config/nginx-custom.conf /etc/nginx/nginx-custom.conf
 COPY ./config/docker-entrypoint.sh /
 
 RUN chown -R nginx /etc/nginx \
@@ -15,7 +18,7 @@ RUN chown -R nginx /etc/nginx \
     && chown -R nginx /run \
     && chown -R nginx /var/cache/nginx \
     && chown nginx ./docker-entrypoint.sh
-RUN chmod u+x ./docker-entrypoint.sh && chmod u+rw /etc/nginx/nginx.conf
+RUN chmod u+x ./docker-entrypoint.sh && chmod u+rw /etc/nginx/nginx.conf /etc/nginx/nginx-custom.conf
 
 USER nginx
 

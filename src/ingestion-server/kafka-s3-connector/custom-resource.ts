@@ -47,6 +47,8 @@ export interface S3SinkConnectorCustomResourceProps {
   readonly rotateIntervalMS: number;
   readonly customConnectorConfiguration: string;
   readonly flushSize: number;
+  readonly customAdditionInfo: string;
+  readonly timeZone: string;
 }
 
 export function createS3SinkConnectorCustomResource(
@@ -91,6 +93,8 @@ export function createS3SinkConnectorCustomResource(
       customConnectorConfiguration: props.customConnectorConfiguration,
       flushSize: props.flushSize,
       stackShortId: stackShortId,
+      customAdditionInfo: props.customAdditionInfo,
+      timeZone: props.timeZone,
     },
   });
 

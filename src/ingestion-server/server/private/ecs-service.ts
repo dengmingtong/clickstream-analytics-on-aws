@@ -85,6 +85,7 @@ export function createECSService(
       NGINX_WORKER_CONNECTIONS: `${workerConnections}`,
       SERVER_ENDPOINT_PATH: props.serverEndpointPath,
       SERVER_CORS_ORIGIN: props.serverCorsOrigin,
+      CUSTOM_ADDITION_INFO: props.customAdditionInfo,
     },
     logging: LogDriver.awsLogs({
       streamPrefix: 'proxy',
@@ -165,17 +166,93 @@ function getVectorEnvs(scope: Construct, props: ECSClusterProps) {
     AWS_KINESIS_STREAM_NAME: props.kinesisSinkConfig?.kinesisDataStream.streamName || '__NOT_SET__',
     STREAM_ACK_ENABLE: `${streamAckEnable}`,
     WORKER_THREADS_NUM: `${workerThreads}`,
+    CUSTOM_ADDITION_INFO: props.customAdditionInfo || '__NOT_SET__',
   };
 }
 
 function getVectorPortMappings() {
   return [
     {
-      containerPort: 8685,
-    },
-    {
       containerPort: 8686,
     },
+    {
+      containerPort: 8650,
+    },
+    {
+      containerPort: 8651,
+    },
+    {
+      containerPort: 8652,
+    },
+    {
+      containerPort: 8653,
+    },    
+    {
+      containerPort: 8654,
+    },
+    {
+      containerPort: 8655,
+    },
+    {
+      containerPort: 8656,
+    },
+    {
+      containerPort: 8657,
+    },
+    {
+      containerPort: 8658,
+    },
+    {
+      containerPort: 8659,
+    },
+    {
+      containerPort: 8660,
+    },
+    {
+      containerPort: 8661,
+    },
+    {
+      containerPort: 8662,
+    },
+    {
+      containerPort: 8663,
+    },
+    {
+      containerPort: 8664,
+    },
+    {
+      containerPort: 8665,
+    },
+    {
+      containerPort: 8666,
+    },
+    {
+      containerPort: 8667,
+    },
+    {
+      containerPort: 8668,
+    },
+    {
+      containerPort: 8669,
+    },
+    {
+      containerPort: 8670,
+    },
+    {
+      containerPort: 8671,
+    },
+    {
+      containerPort: 8672,
+    },
+    {
+      containerPort: 8673,
+    },
+    {
+      containerPort: 8674,
+    },
+    {
+      containerPort: 8675,
+    },        
   ];
 }
 
@@ -193,6 +270,7 @@ function addScalingPolicy(
   });
   scaling.scaleOnCpuUtilization('CpuScaling', {
     targetUtilizationPercent: asgTaskConfig.scaleOnCpuUtilizationPercent || 50,
+    policyName: '<policyname>',
     scaleInCooldown: Duration.minutes(45),
     scaleOutCooldown: Duration.minutes(1),
   });

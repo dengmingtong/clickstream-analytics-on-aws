@@ -39,6 +39,8 @@ export interface KafkaS3SinkConnectorProps {
   readonly customConnectorConfiguration: string;
   readonly flushSize: number;
   readonly mskClusterName: string;
+  readonly customAdditionInfo: string;
+  readonly timeZone: string;
 }
 
 export class KafkaS3SinkConnector extends Construct {
@@ -76,6 +78,8 @@ export class KafkaS3SinkConnector extends Construct {
       rotateIntervalMS: props.rotateIntervalMS,
       customConnectorConfiguration: props.customConnectorConfiguration,
       flushSize: props.flushSize,
+      customAdditionInfo: props.customAdditionInfo,
+      timeZone: props.timeZone,
     });
 
     const connectorName = cr.getAttString('connectorName');

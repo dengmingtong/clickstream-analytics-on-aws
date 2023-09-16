@@ -43,6 +43,16 @@ export function createStackParameters(scope: Construct, props: {deliverToKinesis
     },
   );
 
+  const customAdditionInfoParam = new CfnParameter(
+    scope,
+    'CustomAdditionInfo',
+    {
+      description: 'The custom addition info including domain, endpoint path and topics.',
+      type: 'String',
+      default: '',
+    },
+  ); 
+
   const certificateArnParam = new CfnParameter(
     scope,
     'ACMCertificateArn',
@@ -716,6 +726,7 @@ export function createStackParameters(scope: Construct, props: {deliverToKinesis
       workerStopTimeoutParam,
       enableAuthenticationParam,
       authenticationSecretArnParam,
+      customAdditionInfoParam,
     },
   };
 }

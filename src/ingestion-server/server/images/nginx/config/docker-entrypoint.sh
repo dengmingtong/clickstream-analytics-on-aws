@@ -39,12 +39,50 @@ echo "SERVER_ENDPOINT_PATH: $SERVER_ENDPOINT_PATH"
 echo "NGINX_WORKER_CONNECTIONS: $NGINX_WORKER_CONNECTIONS"
 echo "SERVER_CORS_ORIGIN: $SERVER_CORS_ORIGIN"
 
-sed -i "s#%%SERVER_ENDPOINT_PATH%%#$SERVER_ENDPOINT_PATH#g; \
-s#%%NGINX_WORKER_CONNECTIONS%%#$NGINX_WORKER_CONNECTIONS#g;" /etc/nginx/nginx.conf
+
+echo "CUSTOM_ADDITION_INFO: $CUSTOM_ADDITION_INFO"
+
+if [ -n "$CUSTOM_ADDITION_INFO" ]; then
+    CUSTOM_ADDITION_INFO=$(echo "$CUSTOM_ADDITION_INFO" | sed 's/ //g')
+
+    additionInfoList=$(echo "$CUSTOM_ADDITION_INFO" | sed 's/,/ /g')
+
+    START_PORT=8650
+
+    for additionInfo in $additionInfoList; do    
+        domainName=$(echo "$additionInfo" | cut -d "#" -f 1)
+
+
+        sed -i '/%%SERVER_BLOCK%%/r /etc/nginx/nginx-server-snap.txt' /etc/nginx/nginx-custom.conf
+        sed -i "s/%%DOMAIN_NAME%%/$domainName/g" /etc/nginx/nginx-custom.conf
+
+        endpointPaths=$(echo "$additionInfo" | cut -d "#" -f 2)   
+
+        endpointPathList=$(echo "$endpointPaths" | sed 's/:/ /g')
+        
+        for endpointPath in $endpointPathList; do
+            echo endpointPath:$endpointPath
+            sed -i '/%%PATH_BLOCK%%/r /etc/nginx/nginx-path-snap.txt' /etc/nginx/nginx-custom.conf
+            sed -i "s|%%SERVER_ENDPOINT_PATH%%|$endpointPath|g" /etc/nginx/nginx-custom.conf
+            sed -i "s/%%VECTOR_PORT%%/$START_PORT/g" /etc/nginx/nginx-custom.conf
+            START_PORT=$((START_PORT + 1))
+        done
+        sed -i 's/%%PATH_BLOCK%%//g' /etc/nginx/nginx-custom.conf
+    done
+    sed -i 's/%%SERVER_BLOCK%%//g' /etc/nginx/nginx-custom.conf
+    cp /etc/nginx/nginx-custom.conf /etc/nginx/nginx.conf
+else
+    sed -i "s/%%SERVER_ENDPOINT_PATH%%/$SERVER_ENDPOINT_PATH/g" /etc/nginx/nginx.conf    
+fi
 
 if [ -z "$SERVER_CORS_ORIGIN" ]; then
     sed -i "s/%%SERVER_CORS_ORIGIN%%/''/g" /etc/nginx/nginx.conf
 else
-    sed -i "s#%%SERVER_CORS_ORIGIN%%#$SERVER_CORS_ORIGIN#g;" /etc/nginx/nginx.conf
+    sed -i "s/%%SERVER_CORS_ORIGIN%%/$SERVER_CORS_ORIGIN/g;" /etc/nginx/nginx.conf
 fi
+
+sed -i "s/%%NGINX_WORKER_CONNECTIONS%%/$NGINX_WORKER_CONNECTIONS/g" /etc/nginx/nginx.conf
+
+echo "$(cat /etc/nginx/nginx.conf)"
+
 exec "$@"

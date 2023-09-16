@@ -1,0 +1,12 @@
+[sinks.msk_sink_%%SUFFIX%%]
+type = "kafka"
+inputs =  ["json_parser_%%SUFFIX%%"]   
+bootstrap_servers = "%%AWS_MSK_BROKERS%%"
+#key_field = "ip"
+topic = "%%AWS_MSK_TOPIC%%"
+compression = "none"
+batch.max_events = 1000
+batch.timeout_secs = 3
+acknowledgements.enabled = false
+  [sinks.msk_sink_%%SUFFIX%%.encoding]
+  codec = "json"

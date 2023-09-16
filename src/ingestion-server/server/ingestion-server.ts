@@ -124,6 +124,7 @@ export interface IngestionServerProps {
   readonly appIds: string;
   readonly clickStreamSDK: string;
   readonly workerStopTimeout: number;
+  readonly customAdditionInfo: string;
 }
 
 interface UpdateAlbRulesInput {
@@ -220,26 +221,17 @@ export class IngestionServer extends Construct {
         kafkaTopic: props.kafkaSinkConfig.kafkaTopic,
       });
     }
-
-    const appIds = props.appIds;
-    const clickStreamSDK = props.clickStreamSDK;
-    const targetGroupArn = targetGroup.targetGroupArn;
-    const listenerArn = listener.listenerArn;
-    const serverEndpointPath = props.serverEndpointPath;
-    const protocol: ApplicationProtocol = props.protocol;
-    const domainName = props.domainName;
-    const authenticationSecretArn = props.authenticationSecretArn;
-
-    updateAlbRules(this, {
-      appIds,
-      clickStreamSDK,
-      targetGroupArn,
-      listenerArn,
-      serverEndpointPath,
-      protocol,
-      domainName,
-      authenticationSecretArn,
-    });
+    
+    updateAlbRules(this, 
+      props.appIds,
+      props.clickStreamSDK,
+      targetGroup.targetGroupArn,
+      listener.listenerArn,
+      props.serverEndpointPath,
+      props.protocol,
+      props.customAdditionInfo,
+      props.domainName,
+      props.authenticationSecretArn);
 
     deleteECSCluster(this, ecsCluster.clusterArn, ecsCluster.clusterName, ecsService.serviceName);
 
@@ -270,16 +262,16 @@ export class IngestionServer extends Construct {
 
 function updateAlbRules(
   scope: Construct,
-  updateAlbRulesInput: UpdateAlbRulesInput,
+  appIds: string,
+  clickStreamSDK: string,
+  targetGroupArn: string,
+  listenerArn: string,
+  endpointPath: string,
+  protocol: string,
+  customAdditionInfo:string,
+  domainName?: string,
+  authenticationSecretArn?: string,
 ) {
-  const appIds = updateAlbRulesInput.appIds;
-  const clickStreamSDK = updateAlbRulesInput.clickStreamSDK;
-  const targetGroupArn = updateAlbRulesInput.targetGroupArn;
-  const listenerArn = updateAlbRulesInput.listenerArn;
-  const authenticationSecretArn = updateAlbRulesInput.authenticationSecretArn;
-  const endpointPath = updateAlbRulesInput.serverEndpointPath;
-  const domainName = updateAlbRulesInput.domainName;
-  const protocol = updateAlbRulesInput.protocol;
 
   updateAlbRulesCustomResource(scope, {
     appIds,
@@ -290,6 +282,7 @@ function updateAlbRules(
     endpointPath,
     domainName,
     protocol,
+    customAdditionInfo,
   });
 }
 
