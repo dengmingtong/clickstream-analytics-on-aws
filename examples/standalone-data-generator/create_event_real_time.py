@@ -76,16 +76,23 @@ def send_user_event_of_duration(users, all_events, end_timestamp):
     stop_time_stamp = end_timestamp + configure.FLUSH_DURATION * 1000
     while utils.current_timestamp() <= stop_time_stamp:
         now_time = utils.current_timestamp()
+        # send 10 events per request.
         for i in range(len(all_events)):
-            events_len = len(all_events[i])
-            for j in range(events_len):
-                if all_events[i][0]["timestamp"] < now_time and (
-                        now_time < all_events[i][j]["timestamp"] or j == events_len - 1):
-                    if j == events_len - 1:
-                        j = events_len
-                    send_event_real_time.send_events_of_day(users[i], all_events[i][0:j])
-                    all_events[i] = all_events[i][j:]
+            for j in range(0, len(all_events[i]), 10):
+                chunk = all_events[i][j:j + 10]
+                if len(chunk) < 10:
                     break
+                send_event_real_time.send_events_of_day(users[i], chunk)
+        # for i in range(len(all_events)):
+        #     events_len = len(all_events[i])
+        #     for j in range(events_len):
+        #         if all_events[i][0]["timestamp"] < now_time and (
+        #                 now_time < all_events[i][j]["timestamp"] or j == events_len - 1):
+        #             if j == events_len - 1:
+        #                 j = events_len
+        #             send_event_real_time.send_events_of_day(users[i], all_events[i][0:j])
+        #             all_events[i] = all_events[i][j:]
+        #             break
         sleep_duration = configure.FLUSH_DURATION - (utils.current_timestamp() - now_time) / 1000
         sleep_duration = max(0, sleep_duration)
         time.sleep(sleep_duration)
