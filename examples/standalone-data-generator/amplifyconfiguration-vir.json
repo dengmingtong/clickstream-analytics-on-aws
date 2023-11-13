@@ -1,0 +1,15 @@
+{
+  "UserAgent": "aws-solution/clickstream",
+  "Version": "1.0",
+  "analytics": {
+    "plugins": {
+      "awsClickstreamPlugin": {
+        "appId": "performance",
+        "endpoint": "http://Clicks-Inges-hp5YTimv8yEK-898299005.us-east-1.elb.amazonaws.com/collect",
+        "isCompressEvents": true,
+        "autoFlushEventsInterval": 10000,
+        "isTrackAppExceptionEvents": false
+      }
+    }
+  }
+}

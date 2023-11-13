@@ -49,9 +49,10 @@ def get_user_event_of_duration(users, start_timestamp):
         for i in range(session_times):
             hour = enums.visit_hour.get_random_item()
             minute = random.choices(enums.visit_minutes)[0]
-            session_start_time = today + (hour * 60 * 60 + minute * 60 + random.randint(0, 59)) * 1000 \
-                                 + random.randint(0, 999)
-            if start_timestamp < session_start_time < end_timestamp:
+            # session_start_time = today + (hour * 60 * 60 + minute * 60 + random.randint(0, 59)) * 1000 \
+            #                      + random.randint(0, 999)
+            session_start_time = random.randint(start_timestamp, end_timestamp)
+            if start_timestamp <= session_start_time <= end_timestamp:
                 start_time_arr.append(session_start_time)
         start_time_arr = sorted(start_time_arr)
 
@@ -75,7 +76,7 @@ def get_user_event_of_duration(users, start_timestamp):
 def send_user_event_of_duration(users, all_events, end_timestamp):
     stop_time_stamp = end_timestamp + configure.FLUSH_DURATION * 1000
     while utils.current_timestamp() <= stop_time_stamp:
-        now_time = utils.current_timestamp()
+        # now_time = utils.current_timestamp()
         # send 10 events per request.
         for i in range(len(all_events)):
             for j in range(0, len(all_events[i]), 10):
@@ -93,9 +94,9 @@ def send_user_event_of_duration(users, all_events, end_timestamp):
         #             send_event_real_time.send_events_of_day(users[i], all_events[i][0:j])
         #             all_events[i] = all_events[i][j:]
         #             break
-        sleep_duration = configure.FLUSH_DURATION - (utils.current_timestamp() - now_time) / 1000
-        sleep_duration = max(0, sleep_duration)
-        time.sleep(sleep_duration)
+        # sleep_duration = configure.FLUSH_DURATION - (utils.current_timestamp() - now_time) / 1000
+        # sleep_duration = max(0, sleep_duration)
+        # time.sleep(sleep_duration)
     for i in range(len(all_events)):
         if len(all_events[i]) > 0:
             left_events.append(all_events[i])
