@@ -1,4 +1,5 @@
-FROM python:3-alpine
+# run below command on M1 mac to build image for linux/amd64
+FROM --platform=linux/amd64 python:3-alpine   
 
 # Set the working directory to /app
 WORKDIR /app
