@@ -36,6 +36,7 @@ def send_events_to_server(user, events):
         "fakeIp": device.ip_address,
         "event_bundle_sequence_id": global_sequence_id
     }
+    # "debugView": "Yes",
     try:
         response = requests.post(url=configure.ENDPOINT, params=request_param, headers=headers, data=events)
         if response.status_code == 200:
