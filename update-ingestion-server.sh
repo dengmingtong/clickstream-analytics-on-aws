@@ -10,30 +10,6 @@ cat ./src/main.ts | sed -e "s/new IngestionServerStack.*\/\/To Kafka$/new Ingest
 cat ./src/main-tmp.ts  | grep 'new IngestionServerStack(' | grep Kafka
 mv ./src/main-tmp.ts ./src/main.ts 
 
-KafkaBrokers=''
-KafkaTopic=''
-MskSecurityGroupId=''
-mskClusterName=''
-bucketName=''
-VpcId=''
-PublicSubnetIds=''
-PrivateSubnetIds=''
-EnableApplicationLoadBalancerAccessLog=''
-DomainName=''
-ACMCertificateArn=''
-ServerEndpointPath=''
-ServerCorsOrigin=''
-Protocol=''
-LogS3Bucket=''
-LogS3Prefix=''
-ServerMin=''
-ServerMax=''
-WarmPoolSize=''
-ScaleOnCpuUtilizationPercent=''
-ProjectId=''
-ClickStreamSDK=''
-DevMode=''
-WorkerStopTimeout=''
 CustomAdditionInfo=''
 
 npx cdk synth $stackName
@@ -44,6 +20,3 @@ npx cdk deploy $stackName \
 END
 
 $(cat /tmp/cmd)
-
-
-

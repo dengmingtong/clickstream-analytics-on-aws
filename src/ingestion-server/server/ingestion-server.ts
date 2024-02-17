@@ -127,18 +127,6 @@ export interface IngestionServerProps {
   readonly customAdditionInfo: string;
 }
 
-interface UpdateAlbRulesInput {
-  readonly appIds: string;
-  readonly clickStreamSDK: string;
-  readonly targetGroupArn: string;
-  readonly listenerArn: string;
-  readonly serverEndpointPath: string;
-  readonly protocol: ApplicationProtocol;
-  readonly domainName?: string;
-  readonly authenticationSecretArn?: string;
-}
-
-
 export class IngestionServer extends Construct {
   public albDNS: string;
   public acceleratorDNS: string;
