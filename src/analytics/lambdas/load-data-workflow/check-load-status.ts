@@ -49,6 +49,7 @@ type CheckLoadStatusEventDetail = ManifestBody & {
 export interface CheckLoadStatusEvent {
   detail: CheckLoadStatusEventDetail;
   waitTimeInfo: WaitTimeInfo;
+  odsTableName: string;
 }
 
 const redshiftDataApiClient = getRedshiftClient(REDSHIFT_DATA_API_ROLE_ARN);
@@ -68,6 +69,7 @@ export const handler = async (event: CheckLoadStatusEvent, context: Context) => 
   const appId = event.detail.appId;
   const dynamodbTableName = DYNAMODB_TABLE_NAME!;
   const manifestFileName = event.detail.manifestFileName;
+  const odsTableName = event.odsTableName;
   let jobList = event.detail.jobList;
   logger.debug(`query_id:${queryId}`);
   // There is a loading job need to check result.
