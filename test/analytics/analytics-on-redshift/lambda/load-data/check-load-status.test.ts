@@ -38,6 +38,7 @@ const loadStatusEvent: CheckLoadStatusEvent = {
       }],
     },
   },
+  odsTableName: 'test_me_table',
   waitTimeInfo: {
     waitTime: 10,
     loopCount: 1,
@@ -62,6 +63,7 @@ const loadStatusEvent2: CheckLoadStatusEvent = {
       }],
     },
   },
+  odsTableName: 'test_me_table',
   waitTimeInfo: {
     waitTime: 10,
     loopCount: 1,
@@ -86,6 +88,7 @@ const loadStatusEvent3: CheckLoadStatusEvent = {
       }],
     },
   },
+  odsTableName: 'test_me_table',
   waitTimeInfo: {
     waitTime: 10,
     loopCount: 1,
@@ -123,6 +126,7 @@ describe('Lambda - check the COPY query status in Redshift Serverless', () => {
       detail: {
         status: StatusString.FINISHED,
       },
+      odsTableName: 'test_me_table',
     });
     expect(redshiftDataMock).toHaveReceivedCommandWith(DescribeStatementCommand, {
       Id: loadStatusEvent.detail.id,
@@ -148,6 +152,7 @@ describe('Lambda - check the COPY query status in Redshift Serverless', () => {
       detail: expect.objectContaining({
         status: StatusString.STARTED,
       }),
+      odsTableName: 'test_me_table',
       waitTimeInfo: expect.objectContaining({
         waitTime: 10,
         loopCount: 2,
@@ -272,6 +277,7 @@ describe('Lambda - check the COPY query status in Redshift Serverless', () => {
       detail: {
         status: StatusString.FINISHED,
       },
+      odsTableName: 'test_me_table',
     });
     expect(redshiftDataMock).toHaveReceivedCommandWith(DescribeStatementCommand, {
       Id: loadStatusEvent.detail.id,
