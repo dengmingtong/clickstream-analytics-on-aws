@@ -70,6 +70,7 @@ export const handler = async (event: CheckLoadStatusEvent, context: Context) => 
   const dynamodbTableName = DYNAMODB_TABLE_NAME!;
   const manifestFileName = event.detail.manifestFileName;
   const odsTableName = event.odsTableName;
+  logger.debug(`mingtong ########### odsTableName:${odsTableName}`);
   let jobList = event.detail.jobList;
   logger.debug(`query_id:${queryId}`);
   // There is a loading job need to check result.
@@ -104,6 +105,7 @@ export const handler = async (event: CheckLoadStatusEvent, context: Context) => 
         detail: {
           status: response.Status,
         },
+        odsTableName: odsTableName,
       };
     } else if (response.Status == StatusString.FAILED || response.Status == StatusString.ABORTED) {
       logger.info(`Executing ${queryId} status of statement is ${response.Status}`);
@@ -118,6 +120,7 @@ export const handler = async (event: CheckLoadStatusEvent, context: Context) => 
           retry: retryCount < MAX_RETRY && (!!response.Error?.includes('could not complete because of conflict with concurrent transaction')),
           retryCount: retryCount + 1,
         },
+        odsTableName: odsTableName,
       };
     }
     logger.info(`Executing ${queryId} status of statement is ${response.Status}`);
@@ -133,6 +136,7 @@ export const handler = async (event: CheckLoadStatusEvent, context: Context) => 
         retryCount,
       },
       waitTimeInfo,
+      odsTableName: odsTableName,
     };
   } catch (err) {
     if (err instanceof Error) {
