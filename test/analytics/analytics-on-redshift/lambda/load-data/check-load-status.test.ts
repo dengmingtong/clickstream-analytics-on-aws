@@ -39,6 +39,8 @@ const loadStatusEvent: CheckLoadStatusEvent = {
     },
   },
   odsTableName: 'test_me_table',
+  odsSourceBucket: 'DOC-EXAMPLE-BUCKET',
+  odsSourcePrefix: 'project1/ods_external_events',
   waitTimeInfo: {
     waitTime: 10,
     loopCount: 1,
@@ -64,6 +66,8 @@ const loadStatusEvent2: CheckLoadStatusEvent = {
     },
   },
   odsTableName: 'test_me_table',
+  odsSourceBucket: 'DOC-EXAMPLE-BUCKET',
+  odsSourcePrefix: 'project1/ods_external_events',
   waitTimeInfo: {
     waitTime: 10,
     loopCount: 1,
@@ -89,6 +93,8 @@ const loadStatusEvent3: CheckLoadStatusEvent = {
     },
   },
   odsTableName: 'test_me_table',
+  odsSourceBucket: 'DOC-EXAMPLE-BUCKET',
+  odsSourcePrefix: 'project1/ods_external_events',
   waitTimeInfo: {
     waitTime: 10,
     loopCount: 1,
@@ -126,7 +132,9 @@ describe('Lambda - check the COPY query status in Redshift Serverless', () => {
       detail: {
         status: StatusString.FINISHED,
       },
-      odsTableName: 'test_me_table',
+      odsTableName: loadStatusEvent.odsTableName,
+      odsSourceBucket: loadStatusEvent.odsSourceBucket,
+      odsSourcePrefix: loadStatusEvent.odsSourcePrefix,
     });
     expect(redshiftDataMock).toHaveReceivedCommandWith(DescribeStatementCommand, {
       Id: loadStatusEvent.detail.id,
@@ -152,7 +160,9 @@ describe('Lambda - check the COPY query status in Redshift Serverless', () => {
       detail: expect.objectContaining({
         status: StatusString.STARTED,
       }),
-      odsTableName: 'test_me_table',
+      odsTableName: loadStatusEvent.odsTableName,
+      odsSourceBucket: loadStatusEvent.odsSourceBucket,
+      odsSourcePrefix: loadStatusEvent.odsSourcePrefix,
       waitTimeInfo: expect.objectContaining({
         waitTime: 10,
         loopCount: 2,
@@ -278,6 +288,8 @@ describe('Lambda - check the COPY query status in Redshift Serverless', () => {
         status: StatusString.FINISHED,
       },
       odsTableName: 'test_me_table',
+      odsSourceBucket: loadStatusEvent.odsSourceBucket,
+      odsSourcePrefix: loadStatusEvent.odsSourcePrefix,
     });
     expect(redshiftDataMock).toHaveReceivedCommandWith(DescribeStatementCommand, {
       Id: loadStatusEvent.detail.id,
