@@ -85,8 +85,8 @@ export const handler = async (event: LoadManifestEvent, context: Context) => {
   let appId = event.detail.appId;
   const manifestFileName = event.detail.manifestFileName;
   const odsTableName = event.odsTableName;
-  const odsSourceBucket = event.odsSourceBucket;
-  const odsSourcePrefix = event.odsSourcePrefix;
+  // const odsSourceBucket = event.odsSourceBucket;
+  // const odsSourcePrefix = event.odsSourcePrefix;
   logger.debug(`odsTableName: ${odsTableName}`);
   const jobList = event.detail.jobList;
   logger.info('Event details', { details: event.detail });
@@ -142,9 +142,9 @@ export const handler = async (event: LoadManifestEvent, context: Context) => {
         jobList: jobList,
         retryCount,
       },
-      odsTableName: odsTableName,
-      odsSourceBucket: odsSourceBucket,
-      odsSourcePrefix: odsSourcePrefix,
+      // odsTableName: odsTableName,
+      // odsSourceBucket: odsSourceBucket,
+      // odsSourcePrefix: odsSourcePrefix,
     };
   } catch (err) {
     if (err instanceof Error) {

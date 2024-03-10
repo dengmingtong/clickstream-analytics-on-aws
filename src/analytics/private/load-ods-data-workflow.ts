@@ -313,7 +313,12 @@ export class LoadOdsDataToRedshiftWorkflow extends Construct {
           'odsSourceBucket.$': '$.odsSourceBucket',
           'odsSourcePrefix.$': '$.odsSourcePrefix',
         }),
-        outputPath: '$.Payload',
+        // outputPath: '$.Payload',
+        resultSelector: {
+          'manifestList.$': '$.Payload.manifestList',
+          'count.$': '$.Payload.count',
+        },
+        resultPath: '$.Payload',
       });
 
       getJobList.addRetry({
