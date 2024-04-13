@@ -5,18 +5,18 @@ SIMPLE_REGION=$1
 DOCKERFILE_PATH="./Dockerfile"
 IMAGE_NAME="clickstream-sample-data"
 TAG=$SIMPLE_REGION
-AWS_REGION="ap-southeast-1"
-AWS_ACCOUNT_ID="539689806100"
+AWS_REGION=""
+AWS_ACCOUNT_ID=""
 ECR_REPO_NAME="clickstream-sample-data-repo"
 NUMBER_OF_TASKS=$2
 CLUSTER_NAME="clickstream-sample-data-cluster-${SIMPLE_REGION}"
 SERVICE_NAME="clickstream-sample-data-service-${SIMPLE_REGION}"
 TASK_DEFINITION_NAME="clickstream-sample-data-task-${SIMPLE_REGION}"
-SUBNET_ID="subnet-080be942c109dbbd4,subnet-0a6bd80cce100ccaa,subnet-0aa2c134409c0df51"
-SECURITY_GROUP_ID="sg-0ff0faa2014c50489"
+SUBNET_ID=""
+SECURITY_GROUP_ID=""
 LOG_GROUP_NAME="/ecs/clickstream-sample-data-log-${SIMPLE_REGION}"
-ROLE_NAME="clickstream-sample-data-ecs-task-role-new"
-ROLE="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${ROLE_NAME}"  # Ensure the role has the necessary permissions
+ROLE_NAME="clickstream-sample-data-ecs-task-role-${AWS_REGION}"
+ROLE="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${ROLE_NAME}"
 
 cp -f "amplifyconfiguration-${SIMPLE_REGION}.json" amplifyconfiguration.json
 
