@@ -12,8 +12,8 @@
  */
 
 import { logger } from '@aws/clickstream-base-lib';
-import { getRedshiftClient, executeStatements, getRedshiftProps } from '../redshift-data';
 import { RefreshViewOrSp } from './get-refresh-viewlist';
+import { getRedshiftClient, executeStatements, getRedshiftProps } from '../redshift-data';
 
 const REDSHIFT_DATA_API_ROLE_ARN = process.env.REDSHIFT_DATA_API_ROLE!;
 const REDSHIFT_DATABASE = process.env.REDSHIFT_DATABASE!;
@@ -21,7 +21,7 @@ const REDSHIFT_DATABASE = process.env.REDSHIFT_DATABASE!;
 const redshiftDataApiClient = getRedshiftClient(REDSHIFT_DATA_API_ROLE_ARN);
 
 export interface RefreshSpEvent {
-  sp: RefreshViewOrSp,
+  sp: RefreshViewOrSp;
   timezoneWithAppId: {
     appId: string;
     timezone: string;
@@ -79,7 +79,6 @@ export const handler = async (event: RefreshSpEvent) => {
         spName: spName,
         refreshDate: refreshDate,
       },
-      timezoneWithAppId,
     };
   } catch (err) {
     logger.error('Error when refresh sp:', { err });

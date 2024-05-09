@@ -21,10 +21,7 @@ export interface RefreshViewOrSp {
   viewName?: string;
 }
 
-export interface CheckNextRefreshViewEvent {
-  // detail: {
-  //   completeRefreshView: string;
-  // };
+export interface GetRefreshViewListEvent {
   timezoneWithAppId: {
     appId: string;
     timezone: string;
@@ -45,8 +42,12 @@ export interface CheckNextRefreshViewEvent {
  * }
  */
 
-export const handler = async (event: CheckNextRefreshViewEvent) => {
-  if (event.originalInput.refreshMode === 'none') {
+export const handler = async (event: GetRefreshViewListEvent) => {
+  let refreshMode = event.originalInput.refreshMode;
+  if (!refreshMode) {
+    refreshMode = process.env.REFRESH_MODE!;
+  }
+  if (refreshMode === 'none') {
     return {
       nextStep: RefreshWorkflowSteps.END_STEP,
     };

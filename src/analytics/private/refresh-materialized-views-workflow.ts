@@ -85,7 +85,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
 
     const initCheckMVWaitTimeInfo = new Pass(this, 'Init Check MV wait time info', {
       parameters: {
-        waitTime: 10,
+        waitTime: 5,
         loopCount: 0,
       },
       resultPath: '$.waitTimeInfo',
@@ -149,7 +149,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
           .otherwise(waitCheckMVStatus),
       );
 
-    const doRefreshJobSucceed = new Succeed(this, `${this.node.id} - Refresh job succeed`);
+    const refreshJobSucceed = new Succeed(this, `${this.node.id} - Refresh job succeed`);
 
     const refreshJobSucceedForAnAppId = new Pass(this, `${this.node.id} - Refresh job succeed for an app_id`);
 
@@ -210,11 +210,11 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
     );
 
     doRefreshJob.itemProcessor(getRefreshViewListJob);
-    doRefreshJob.next(doRefreshJobSucceed);
+    doRefreshJob.next(refreshJobSucceed);
 
     const checkJobExist = new Choice(this, `${this.node.id} - Check if job exists`)
       .when(Condition.isPresent('$.timezoneWithAppIdList'), doRefreshJob)
-      .otherwise(doRefreshJobSucceed);
+      .otherwise(refreshJobSucceed);
 
     const parseTimeZoneWithAppIdListFn = this.parseTimeZoneWithAppIdList(props, lambdaLogGroup);
     const parseTimeZoneWithAppIdListJob = new LambdaInvoke(this, `${this.node.id} - Parse timezone with appId list from props`, {
@@ -254,7 +254,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
     const refreshWorkflowDefinition = checkWorkflowStartJob
       .next(
         new Choice(this, `${this.node.id} - Check if refresh workflow start`)
-          .when(Condition.stringEquals('$.status', WorkflowStatus.SKIP), doRefreshJobSucceed)
+          .when(Condition.stringEquals('$.status', WorkflowStatus.SKIP), refreshJobSucceed)
           .when(Condition.stringEquals('$.status', WorkflowStatus.CONTINUE), getAppIdList));
 
     // Create state machine
@@ -336,7 +336,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
   private getRefreshViewListFn(props: RefreshMaterializedViewsWorkflowProps, logGroup: LogGroup): IFunction {
     const fnSG = props.securityGroupForLambda;
 
-    const fn = new SolutionNodejsFunction(this, 'CheckNextRefreshView', {
+    const fn = new SolutionNodejsFunction(this, 'GetRefreshViewList', {
       entry: join(
         this.lambdaRootPath,
         'get-refresh-viewlist.ts',
@@ -346,11 +346,12 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
       timeout: Duration.minutes(3),
       logGroup,
       reservedConcurrentExecutions: 1,
-      role: createLambdaRole(this, 'CheckNextRefreshViewRole', true, []),
+      role: createLambdaRole(this, 'GetRefreshViewListRole', true, []),
       ...props.networkConfig,
       securityGroups: [fnSG],
       environment: {
         PROJECT_ID: props.projectId,
+        REFRESH_MODE: 'all',
       },
       applicationLogLevel: 'WARN',
     });
@@ -406,6 +407,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
         ... this.toRedshiftEnvVariables(props),
         PROJECT_ID: props.projectId,
         REDSHIFT_DATA_API_ROLE: props.dataAPIRole.roleArn,
+        REFRESH_MODE: 'all',
         REFRESH_SP_DAYS: props.refreshReportDays.toString(),
       },
       applicationLogLevel: 'WARN',
@@ -507,9 +509,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
   }
 
   private createSubWorkflow(props: RefreshMaterializedViewsWorkflowProps, lambdaLogGroup: LogGroup, stepFunctionLogGroup: LogGroup): IStateMachine {
-    const doRefreshSpJobSucceed = new Pass(this, `${this.node.id} - Refresh sp job succeed`);
-
-    const doNothing = new Succeed(this, `${this.node.id} - Do Nothing`);
+    const doRefreshSpJobSucceed = new Succeed(this, `${this.node.id} - Refresh sp job succeed`);
 
     const refreshSpFn = this.refreshSpFn(props, lambdaLogGroup);
     const refreshSpFnJob = new LambdaInvoke(this, `${this.node.id} - refresh SP`, {
@@ -521,7 +521,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
         'refreshSpDays.$': '$.refreshSpDays',
       }),
       outputPath: '$.Payload',
-    });   
+    });
 
     refreshSpFnJob.addRetry({
       errors: ['Lambda.TooManyRequestsException'],
@@ -555,7 +555,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
 
     const initCheckSPWaitTimeInfo = new Pass(this, 'Init Check SP wait time info', {
       parameters: {
-        waitTime: 10,
+        waitTime: 5,
         loopCount: 0,
       },
       resultPath: '$.waitTimeInfo',
@@ -564,10 +564,10 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
     const refreshSpJobFailed = new Fail(this, `${this.node.id} - Refresh sp job fails`, {
       cause: 'Refresh SP Job Failed',
       error: 'Refresh SP Job FAILED',
-    });    
+    });
 
-    const refreshSpComplete = new Pass(this, `${this.node.id} - refresh sp completes`);    
-    
+    const refreshSpComplete = new Pass(this, `${this.node.id} - refresh sp completes`);
+
     refreshSpFnJob
       .next(initCheckSPWaitTimeInfo)
       .next(waitCheckSPStatus)
@@ -578,7 +578,7 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
           .when(Condition.stringEquals('$.detail.status', WorkflowStatus.ABORTED), refreshSpJobFailed)
           .when(Condition.stringEquals('$.detail.status', WorkflowStatus.FINISHED), refreshSpComplete)
           .otherwise(waitCheckSPStatus),
-      );     
+      );
 
     const checkStartSpRefreshFn = this.checkStartSpRefreshFn(props, lambdaLogGroup);
     const checkStartSpRefreshJob = new LambdaInvoke(this, `${this.node.id} - Check whether start SP refresh`, {
@@ -606,7 +606,6 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
         inputPath: '$',
         itemSelector: {
           'sp.$': '$$.Map.Item.Value',
-          'timezoneWithAppId.$': '$$.Execution.Input.timezoneWithAppId',
           'refreshDate.$': '$.refreshDate',
           'refreshSpDays.$': '$.refreshSpDays',
         },
@@ -614,14 +613,14 @@ export class RefreshMaterializedViewsWorkflow extends Construct {
       },
     );
     doRefreshSpJob.itemProcessor(refreshSpFnJob);
-    doRefreshSpJob.next(doRefreshSpJobSucceed);    
+    doRefreshSpJob.next(doRefreshSpJobSucceed);
 
     checkStartSpRefreshJob
-    .next(
-      new Choice(this, `${this.node.id} - Choice refresh SP start`)
-        .when(Condition.stringEquals('$.nextStep', 'REFRESH_SP'), doRefreshSpJob)
-        .otherwise(doNothing),
-    );
+      .next(
+        new Choice(this, `${this.node.id} - Choice refresh SP start`)
+          .when(Condition.stringEquals('$.nextStep', 'REFRESH_SP'), doRefreshSpJob)
+          .otherwise(doRefreshSpJobSucceed),
+      );
 
     const subRefreshSpStateMachine = new StateMachine(this, 'RefreshSpStateMachine', {
       definitionBody: DefinitionBody.fromChainable(checkStartSpRefreshJob),

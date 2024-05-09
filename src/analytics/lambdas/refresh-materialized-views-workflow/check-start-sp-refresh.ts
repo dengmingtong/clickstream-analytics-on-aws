@@ -50,7 +50,11 @@ export interface CheckStartRefreshSpEvent {
 * }
 */
 export const handler = async (event: CheckStartRefreshSpEvent) => {
-  if (event.originalInput.refreshMode === 'no_report') {
+  let refreshMode = event.originalInput.refreshMode;
+  if (!refreshMode) {
+    refreshMode = process.env.REFRESH_MODE!;
+  }
+  if (refreshMode === 'no_report') {
     return {
       nextStep: RefreshWorkflowSteps.END_STEP,
     };
@@ -60,7 +64,7 @@ export const handler = async (event: CheckStartRefreshSpEvent) => {
   const forceRefresh = event.originalInput.forceRefresh;
   const refreshDateString = getDateStringFromEndTimeAndTimezone(event.originalInput.refreshEndTime, timezoneWithAppId.timezone);
 
-  let skipSpRefresh = true;
+  let skipSpRefresh = false;
   if (forceRefresh !== 'true') {
     skipSpRefresh = await isSkipSpRefresh(timezoneWithAppId.appId, refreshDateString);
   }
@@ -94,7 +98,7 @@ function getRrefreshSpDays(endTime: string, startTime: string, timezone: string)
     const startMoment = utc(parseInt(startTime));
     const endDateTimezone = endMoment.tz(timezone);
     const startDateTimezone = startMoment.tz(timezone);
-  
+
     refreshSpDays = endDateTimezone.diff(startDateTimezone, 'days') + 1;
   }
   return refreshSpDays;
@@ -109,7 +113,7 @@ async function isSkipSpRefresh(appId: string, refreshDateString: string) {
     process.env.REDSHIFT_DB_USER!,
     process.env.REDSHIFT_SERVERLESS_WORKGROUP_NAME!,
     process.env.REDSHIFT_CLUSTER_IDENTIFIER!,
-  );  
+  );
 
   const propertyListSqlStatements: string[] = [];
   propertyListSqlStatements.push(`SELECT MAX(refresh_date) FROM ${appId}.refresh_mv_sp_status where triggerred_by = 'WORK_FLOW';`);

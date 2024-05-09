@@ -636,12 +636,12 @@ export function createStackParameters(scope: Construct): {
   });
 
   const dataFreshnessInHourParam = Parameters.createDataFreshnessInHourParameter(scope, 24);
-  
+
   const refreshReportDaysParam = new CfnParameter(scope, 'RefreshReportDays', {
-    description: `Refresh report data in day, default is 1 day`,
+    description: 'Refresh report data in day, default is 1 day',
     default: 1,
     type: 'Number',
-  });  
+  });
 
   const timezoneWithAppIdParam = new CfnParameter(scope, 'TimeZoneWithAppId', {
     description: 'The time zone with app id as json string',

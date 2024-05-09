@@ -14,9 +14,9 @@
 import { logger } from '@aws/clickstream-base-lib';
 import { StatusString } from '@aws-sdk/client-redshift-data';
 import { Context } from 'aws-lambda';
+import { getRefreshList } from './get-refresh-viewlist';
 import { handleBackoffTimeInfo } from '../../../common/workflow';
 import { describeStatement, getRedshiftClient, executeStatements, getRedshiftProps } from '../redshift-data';
-import { getRefreshList } from './get-refresh-viewlist';
 
 const REDSHIFT_DATA_API_ROLE_ARN = process.env.REDSHIFT_DATA_API_ROLE!;
 const REDSHIFT_DATABASE = process.env.REDSHIFT_DATABASE!;
@@ -71,17 +71,20 @@ export const _handler = async (event: CheckRefreshSpStatusEvent, context: Contex
 
   if (response.Status == StatusString.FINISHED) {
 
-    if (forceRefresh && forceRefresh === 'false' && checkIsLastSpRefreshed(spName)) {
+    if (checkIsLastSpRefreshed(spName)) {
       const sqlStatements: string[] = [];
-      sqlStatements.push(`INSERT INTO ${timezoneWithAppId.appId}.refresh_mv_sp_status (refresh_name, refresh_type, refresh_date, triggerred_by) VALUES ('${spName}', 'SP', '${refreshDate}', 'WORK_FLOW');`);
-      await executeStatements(redshiftDataApiClient, sqlStatements, redshiftProps.serverlessRedshiftProps, redshiftProps.provisionedRedshiftProps);    
+      if (forceRefresh && forceRefresh === 'false') {
+        sqlStatements.push(`INSERT INTO ${timezoneWithAppId.appId}.refresh_mv_sp_status (refresh_name, refresh_type, refresh_date, triggerred_by) VALUES ('${spName}', 'SP', '${refreshDate}', 'WORK_FLOW');`);
+      } else {
+        sqlStatements.push(`INSERT INTO ${timezoneWithAppId.appId}.refresh_mv_sp_status (refresh_name, refresh_type, refresh_date, triggerred_by) VALUES ('${spName}', 'SP', '${refreshDate}', 'MANUALLY');`);
+      }
+      await executeStatements(redshiftDataApiClient, sqlStatements, redshiftProps.serverlessRedshiftProps, redshiftProps.provisionedRedshiftProps);
     }
     return {
       detail: {
         status: response.Status,
         completeRefreshSp: spName,
       },
-      timezoneWithAppId,
     };
   } else if (response.Status == StatusString.FAILED || response.Status == StatusString.ABORTED) {
     logger.error(`Executing ${queryId} ,status of statement is ${response.Status}`);
@@ -102,7 +105,6 @@ export const _handler = async (event: CheckRefreshSpStatusEvent, context: Contex
         refreshDate: refreshDate,
         status: response.Status,
       },
-      timezoneWithAppId,
     };
   }
 };
@@ -115,7 +117,6 @@ function checkIsLastSpRefreshed(spName: string) {
     return true;
   }
   return false;
-
 }
 
 export const handler = handleBackoffTimeInfo(_handler);
