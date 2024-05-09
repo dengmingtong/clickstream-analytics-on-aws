@@ -11,7 +11,7 @@
  *  and limitations under the License.
  */
 
-import { getRefreshList } from './check-next-refresh-view';
+import { getRefreshList } from './get-refresh-viewlist';
 import { RefreshWorkflowSteps } from '../../private/constant';
 
 export interface CheckNextRefreshSpEvent {

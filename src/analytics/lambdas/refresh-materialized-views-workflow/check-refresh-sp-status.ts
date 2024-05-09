@@ -16,6 +16,7 @@ import { StatusString } from '@aws-sdk/client-redshift-data';
 import { Context } from 'aws-lambda';
 import { handleBackoffTimeInfo } from '../../../common/workflow';
 import { describeStatement, getRedshiftClient, executeStatements, getRedshiftProps } from '../redshift-data';
+import { getRefreshList } from './get-refresh-viewlist';
 
 const REDSHIFT_DATA_API_ROLE_ARN = process.env.REDSHIFT_DATA_API_ROLE!;
 const REDSHIFT_DATABASE = process.env.REDSHIFT_DATABASE!;
@@ -38,9 +39,12 @@ export interface CheckRefreshSpStatusEvent {
     spName: string;
     refreshDate: string;
   };
+  timezoneWithAppId: {
+    appId: string;
+    timezone: string;
+  };
   originalInput: {
     forceRefresh: string;
-    appId: string;
   };
 }
 
@@ -57,30 +61,27 @@ export interface CheckRefreshSpStatusEvent {
 export const _handler = async (event: CheckRefreshSpStatusEvent, context: Context) => {
   logger.debug(`context.awsRequestId:${context.awsRequestId}`);
   const queryId = event.detail.queryId;
-  const appId = event.originalInput.appId;
   const refreshDate = event.detail.refreshDate;
-  const forceRefresh = event.originalInput.forceRefresh;
   const spName = event.detail.spName;
+  const timezoneWithAppId = event.timezoneWithAppId;
+  const forceRefresh = event.originalInput.forceRefresh;
   logger.debug(`query_id:${queryId}`);
 
   const response = await describeStatement(redshiftDataApiClient, queryId);
 
   if (response.Status == StatusString.FINISHED) {
-    if (forceRefresh !== 'true') {
-      const sqlStatements: string[] = [];
 
-      sqlStatements.push(`INSERT INTO ${appId}.refresh_mv_sp_status (refresh_name, refresh_type, refresh_date, triggerred_by) VALUES ('${spName}', 'SP', '${refreshDate}', 'WORK_FLOW');`);
-      await executeStatements(redshiftDataApiClient, sqlStatements, redshiftProps.serverlessRedshiftProps, redshiftProps.provisionedRedshiftProps);
-    } else {
+    if (forceRefresh && forceRefresh === 'false' && checkIsLastSpRefreshed(spName)) {
       const sqlStatements: string[] = [];
-      sqlStatements.push(`INSERT INTO ${appId}.refresh_mv_sp_status (refresh_name, refresh_type, refresh_date, triggerred_by) VALUES ('${spName}', 'SP', '${refreshDate}', 'MANUALLY');`);
-      await executeStatements(redshiftDataApiClient, sqlStatements, redshiftProps.serverlessRedshiftProps, redshiftProps.provisionedRedshiftProps);
+      sqlStatements.push(`INSERT INTO ${timezoneWithAppId.appId}.refresh_mv_sp_status (refresh_name, refresh_type, refresh_date, triggerred_by) VALUES ('${spName}', 'SP', '${refreshDate}', 'WORK_FLOW');`);
+      await executeStatements(redshiftDataApiClient, sqlStatements, redshiftProps.serverlessRedshiftProps, redshiftProps.provisionedRedshiftProps);    
     }
     return {
       detail: {
         status: response.Status,
         completeRefreshSp: spName,
       },
+      timezoneWithAppId,
     };
   } else if (response.Status == StatusString.FAILED || response.Status == StatusString.ABORTED) {
     logger.error(`Executing ${queryId} ,status of statement is ${response.Status}`);
@@ -101,8 +102,20 @@ export const _handler = async (event: CheckRefreshSpStatusEvent, context: Contex
         refreshDate: refreshDate,
         status: response.Status,
       },
+      timezoneWithAppId,
     };
   }
 };
+
+function checkIsLastSpRefreshed(spName: string) {
+  const spList = getRefreshList().spList;
+  // check spName is the last one in the list
+  const lastSpName = spList[spList.length - 1];
+  if (spName === lastSpName.name) {
+    return true;
+  }
+  return false;
+
+}
 
 export const handler = handleBackoffTimeInfo(_handler);

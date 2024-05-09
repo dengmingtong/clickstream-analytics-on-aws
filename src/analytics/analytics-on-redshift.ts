@@ -95,6 +95,7 @@ export interface RedshiftAnalyticsStackProps extends NestedStackProps {
   readonly clickstreamMetadataDdbTable: ITable;
   readonly segmentsS3Prefix: string;
   readonly dataFreshnessInHour: number;
+  readonly refreshReportDays: number;
   readonly timezoneWithAppId: string;
 }
 
@@ -319,6 +320,7 @@ export class RedshiftAnalyticsStack extends NestedStack {
       databaseName: projectDatabaseName,
       dataAPIRole: this.redshiftDataAPIExecRole,
       dataFreshnessInHour: props.dataFreshnessInHour,
+      refreshReportDays: props.refreshReportDays,
       timezoneWithAppId: props.timezoneWithAppId,
     });
 

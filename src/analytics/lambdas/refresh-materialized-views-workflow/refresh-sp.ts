@@ -13,6 +13,7 @@
 
 import { logger } from '@aws/clickstream-base-lib';
 import { getRedshiftClient, executeStatements, getRedshiftProps } from '../redshift-data';
+import { RefreshViewOrSp } from './get-refresh-viewlist';
 
 const REDSHIFT_DATA_API_ROLE_ARN = process.env.REDSHIFT_DATA_API_ROLE!;
 const REDSHIFT_DATABASE = process.env.REDSHIFT_DATABASE!;
@@ -20,15 +21,13 @@ const REDSHIFT_DATABASE = process.env.REDSHIFT_DATABASE!;
 const redshiftDataApiClient = getRedshiftClient(REDSHIFT_DATA_API_ROLE_ARN);
 
 export interface RefreshSpEvent {
-  detail: {
-    spName: string;
-    timezoneSensitive: string;
-    refreshDate: string;
-  };
-  originalInput: {
+  sp: RefreshViewOrSp,
+  timezoneWithAppId: {
     appId: string;
     timezone: string;
   };
+  refreshDate: string;
+  refreshSpDays: string;
 }
 
 /**
@@ -58,30 +57,29 @@ export const handler = async (event: RefreshSpEvent) => {
 
   const sqlStatements: string[] = [];
   try {
-    const appId = event.originalInput.appId;
-    const timezone = event.originalInput.timezone;
-    const spName = event.detail.spName;
-    const refreshDate = event.detail.refreshDate;
-    const timezoneSensitive = event.detail.timezoneSensitive;
+    const timezoneWithAppId = event.timezoneWithAppId;
+    const spName = event.sp.name;
+    const refreshDate = event.refreshDate;
+    const timezoneSensitive = event.sp.timezoneSensitive;
+    const refreshSpDays = event.refreshSpDays;
     if (timezoneSensitive === 'true') {
-      sqlStatements.push(`CALL ${appId}.${spName}('${refreshDate}', '${timezone}');`);
+      sqlStatements.push(`CALL ${timezoneWithAppId.appId}.${spName}('${refreshDate}', '${timezoneWithAppId.timezone}', ${refreshSpDays});`);
     } else {
-      sqlStatements.push(`CALL ${appId}.${spName}('${refreshDate}');`);
+      sqlStatements.push(`CALL ${timezoneWithAppId.appId}.${spName}('${refreshDate}', ${refreshSpDays});`);
     }
 
     logger.info('sqlStatements', { sqlStatements });
     const queryId = await executeStatements(
       redshiftDataApiClient, sqlStatements, redshiftProps.serverlessRedshiftProps, redshiftProps.provisionedRedshiftProps);
 
-    logger.info(`Refresh sp for app: ${appId} finished, spName: ${spName}`);
+    logger.info(`Refresh sp for app: ${timezoneWithAppId.appId} finished, spName: ${spName}`);
     return {
       detail: {
         queryId: queryId,
         spName: spName,
         refreshDate: refreshDate,
-        appId: appId,
-        timezone: timezone,
       },
+      timezoneWithAppId,
     };
   } catch (err) {
     logger.error('Error when refresh sp:', { err });
