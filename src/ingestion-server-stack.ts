@@ -56,6 +56,7 @@ import {
 } from './ingestion-server/server/ingestion-server';
 import { createStackParameters } from './ingestion-server/server/parameter';
 import { addCfnNagToIngestionServer } from './ingestion-server/server/private/cfn-nag';
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 
 export interface IngestionServerNestStackProps extends StackProps {
   readonly vpcId: string;
@@ -160,7 +161,7 @@ export class IngestionServerNestedStack extends NestedStack {
       workerCpu: 1792,
       proxyCpu: 256,
       instanceType: new InstanceType('c6i.large'),
-      isArm: false,
+      arch: Platform.LINUX_AMD64,
       warmPoolSize: 0,
       proxyReservedMemory: 900,
       workerReservedMemory: 900,

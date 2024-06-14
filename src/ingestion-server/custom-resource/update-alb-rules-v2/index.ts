@@ -11,8 +11,26 @@
  *  and limitations under the License.
  */
 import { aws_sdk_client_common_config, logger } from '@aws/clickstream-base-lib';
-import { ElasticLoadBalancingV2Client, DescribeRulesCommand, CreateRuleCommand, DeleteRuleCommand, ModifyListenerCommand, ModifyRuleCommand, Rule, RuleCondition, ActionTypeEnum, AuthenticateCognitoActionConditionalBehaviorEnum } from '@aws-sdk/client-elastic-load-balancing-v2';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import {
+  ElasticLoadBalancingV2Client,
+  DescribeRulesCommand,
+  CreateRuleCommand,
+  DeleteRuleCommand,
+  ModifyListenerCommand,
+  ModifyRuleCommand,
+  Rule,
+  RuleCondition,
+  ActionTypeEnum,
+  AuthenticateCognitoActionConditionalBehaviorEnum,
+  DeleteListenerCommand,
+  DescribeListenersCommand,
+  CreateListenerCommand,
+  ProtocolEnum,
+} from '@aws-sdk/client-elastic-load-balancing-v2';
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager';
 import { CloudFormationCustomResourceEvent, CloudFormationCustomResourceUpdateEvent, Context } from 'aws-lambda';
 
 const region = process.env.AWS_REGION!;
@@ -32,7 +50,8 @@ interface ResourcePropertiesType {
   appIds: string;
   clickStreamSDK: string;
   targetGroupArn: string;
-  listenerArn: string;
+  loadBalancerArn: string;
+  certificateArn: string;
   authenticationSecretArn: string;
   endpointPath: string;
   domainName: string;
@@ -41,8 +60,8 @@ interface ResourcePropertiesType {
 
 interface HandleClickStreamSDKInput {
   readonly appIds: string;
-  readonly requestType: string;
   readonly listenerArn: string;
+  readonly requestType: string;
   readonly protocol: string;
   readonly endpointPath: string;
   readonly domainName: string;
@@ -51,21 +70,32 @@ interface HandleClickStreamSDKInput {
 }
 
 interface HandleUpdateInput {
+  readonly loadBalancerArn: string;
   readonly listenerArn: string;
   readonly protocol: string;
   readonly endpointPath: string;
   readonly hostHeader: string;
   readonly authenticationSecretArn: string;
+  readonly targetGroupArn: string;
   readonly oldEndpointPath: string;
   readonly oldHostHeader: string;
   readonly oldAuthenticationSecretArn: string;
+}
+
+interface HandleCreateInput {
+  readonly protocol: string;
+  readonly endpointPath: string;
+  readonly domainName: string;
+  readonly authenticationSecretArn: string;
+  readonly targetGroupArn: string;
+  readonly loadBalancerArn: string;
+  readonly certificateArn: string;
 }
 
 type ResourceEvent = CloudFormationCustomResourceEvent;
 
 export const handler = async (event: ResourceEvent, context: Context) => {
   try {
-    logger.info('=== event ===', {event});
     await _handler(event, context);
     logger.info('=== complete ===');
     return;
@@ -87,40 +117,86 @@ async function _handler(
   const appIds = props.appIds;
   const clickStreamSDK = props.clickStreamSDK;
   const targetGroupArn = props.targetGroupArn;
-  const listenerArn = props.listenerArn;
   const authenticationSecretArn = props.authenticationSecretArn;
   const endpointPath = props.endpointPath;
   const domainName = props.domainName;
+  const certificateArn = props.certificateArn;
   const protocol = props.protocol;
-
+  const loadBalancerArn = props.loadBalancerArn;
+  let listenerArn = '';
   if (requestType === 'Create') {
-    await handleCreate(listenerArn, protocol, endpointPath, domainName, authenticationSecretArn, targetGroupArn);
+    listenerArn = await handleCreate( {
+      protocol,
+      endpointPath,
+      domainName,
+      authenticationSecretArn,
+      targetGroupArn,
+      loadBalancerArn,
+      certificateArn,
+    });
   }
 
   if (requestType === 'Update') {
     const oldProps = (event as CloudFormationCustomResourceUpdateEvent).OldResourceProperties as ResourcePropertiesType;
+    const oldProtocol = oldProps.protocol;
+    const oldTargetGroupArn = oldProps.targetGroupArn;
+    const oldLoadbalancerArn = oldProps.loadBalancerArn;
+    const oldCertificateArn = oldProps.certificateArn;
     const oldEndpointPath = oldProps.endpointPath;
     const oldDomainName = oldProps.domainName;
     const oldAuthenticationSecretArn = oldProps.authenticationSecretArn;
-    await handleUpdate({
-      listenerArn,
-      protocol,
-      endpointPath,
-      hostHeader: domainName,
-      authenticationSecretArn,
-      oldEndpointPath,
-      oldHostHeader: oldDomainName,
-      oldAuthenticationSecretArn,
-    });
+
+    if (protocol !== oldProtocol
+      || targetGroupArn !== oldTargetGroupArn
+      || loadBalancerArn !== oldLoadbalancerArn
+      || certificateArn !== oldCertificateArn
+    ) {
+      listenerArn = await updateListener(oldLoadbalancerArn, protocol, targetGroupArn, loadBalancerArn, certificateArn);
+
+      await createDefaultForwardRule(
+        listenerArn,
+        props.protocol,
+        props.endpointPath,
+        props.domainName,
+        props.authenticationSecretArn,
+        props.targetGroupArn,
+      );
+
+      if (props.authenticationSecretArn && props.authenticationSecretArn.length > 0) {
+        await createAuthLogindRule(props.authenticationSecretArn, listenerArn);
+      }
+    } else {
+      listenerArn = await getListenerArnFromLoadBalancer(loadBalancerArn);
+      if (!listenerArn) {
+        throw new Error('No listener found for load balancer: ' + loadBalancerArn);
+      }
+      await handleUpdateRules({
+        listenerArn,
+        loadBalancerArn,
+        protocol,
+        endpointPath,
+        hostHeader: domainName,
+        authenticationSecretArn,
+        targetGroupArn,
+        oldEndpointPath,
+        oldHostHeader: oldDomainName,
+        oldAuthenticationSecretArn,
+      });
+    }
   }
 
-  if (clickStreamSDK === 'Yes') {
+  if (clickStreamSDK === 'Yes' && requestType !== 'Delete' ) {
     await handleClickStreamSDK({ appIds, requestType, listenerArn, protocol, endpointPath, domainName, authenticationSecretArn, targetGroupArn });
   }
 
-  // set default rules
+  if (requestType !== 'Delete') {
+    // set default rules
+    await modifyFallbackRule(listenerArn);
+  }
+
   if (requestType == 'Delete') {
     logger.info('Delete Listener rules');
+    listenerArn = await getListenerArnFromLoadBalancer(loadBalancerArn);
     const describeRulesCommand = new DescribeRulesCommand({
       ListenerArn: listenerArn,
     });
@@ -128,44 +204,198 @@ async function _handler(
     const removeRules: Rule[] = allAlbRulesResponse.Rules?.filter(rule => !rule.IsDefault) || [];
 
     await deleteRules(removeRules);
-  }
 
-  await modifyFallbackRule(listenerArn);
+    await deleteListener(loadBalancerArn);
+  }
 }
 
 async function handleCreate(
-  listenerArn: string,
-  protocol: string,
-  endpointPath: string,
-  domainName: string,
-  authenticationSecretArn: string,
-  targetGroupArn: string,
+  props: HandleCreateInput,
 ) {
-  // Create defalut forward rule and action
-  await createDefaultForwardRule(listenerArn, protocol, endpointPath, domainName, authenticationSecretArn, targetGroupArn);
+  const listenerArn = await createListeners(props.protocol, props.targetGroupArn, props.loadBalancerArn, props.certificateArn);
 
-  if (authenticationSecretArn && authenticationSecretArn.length > 0) {
-    await createAuthLogindRule(authenticationSecretArn, listenerArn);
+  await createDefaultForwardRule(
+    listenerArn,
+    props.protocol,
+    props.endpointPath,
+    props.domainName,
+    props.authenticationSecretArn,
+    props.targetGroupArn,
+  );
+
+  if (props.authenticationSecretArn && props.authenticationSecretArn.length > 0) {
+    await createAuthLogindRule(props.authenticationSecretArn, listenerArn);
+  }
+
+  return listenerArn;
+}
+
+async function updateListener(
+  oldLoadbalancerArn: string,
+  protocol: string,
+  targetGroupArn: string,
+  loadBalancerArn: string,
+  certificateArn: string,
+) {
+  // delete old listener
+  await deleteListener(oldLoadbalancerArn);
+  // create new listener
+  const listenerArn = await createListeners(protocol, targetGroupArn, loadBalancerArn, certificateArn);
+  return listenerArn;
+}
+
+async function getListenerArnFromLoadBalancer(
+  loadBalancerArn: string,
+) {
+  const describeListenersCommand = new DescribeListenersCommand({ LoadBalancerArn: loadBalancerArn });
+  const listenersResponse = await albClient.send(describeListenersCommand);
+  if (listenersResponse && listenersResponse.Listeners && listenersResponse.Listeners.length > 0) {
+    const mainListener = listenersResponse.Listeners!.find(listener => listener.DefaultActions![0].Type !== ActionTypeEnum.REDIRECT);
+    if (mainListener) {
+      return mainListener.ListenerArn!;
+    }
+  }
+  return '';
+}
+
+async function createListeners(
+  protocol: string,
+  targetGroupArn: string,
+  loadBalancerArn: string,
+  certificateArn: string,
+) {
+  const httpPort = 80;
+  const httpsPort = 443;
+  let listenerArn = '';
+
+  if (protocol === 'HTTPS') {
+    const createListenerCommand = new CreateListenerCommand({
+      DefaultActions: [
+        {
+          Type: ActionTypeEnum.FORWARD,
+          TargetGroupArn: targetGroupArn,
+        },
+      ],
+      LoadBalancerArn: loadBalancerArn,
+      Certificates: [
+        {
+          CertificateArn: certificateArn,
+        },
+      ],
+      SslPolicy: 'ELBSecurityPolicy-TLS-1-2-2017-01',
+      Port: httpsPort,
+      Protocol: ProtocolEnum.HTTPS,
+    });
+    const createListenerResponse = await albClient.send(createListenerCommand);
+    listenerArn = createListenerResponse.Listeners![0].ListenerArn!;
+
+    // create redirect listener
+    const createRedirectListenerCommand = new CreateListenerCommand({
+      DefaultActions: [
+        {
+          Type: ActionTypeEnum.REDIRECT,
+          RedirectConfig: {
+            StatusCode: 'HTTP_301',
+            Protocol: 'HTTPS',
+            Port: httpsPort.toString(),
+          },
+        },
+      ],
+      LoadBalancerArn: loadBalancerArn,
+      Port: httpPort,
+      Protocol: ProtocolEnum.HTTP,
+    });
+    await albClient.send(createRedirectListenerCommand);
+
+  } else {
+    const createListenerCommand = new CreateListenerCommand({
+      DefaultActions: [
+        {
+          Type: ActionTypeEnum.FORWARD,
+          TargetGroupArn: targetGroupArn,
+        },
+      ],
+      LoadBalancerArn: loadBalancerArn,
+      Port: httpPort,
+      Protocol: ProtocolEnum.HTTP,
+    });
+    const createListenerResponse = await albClient.send(createListenerCommand);
+    listenerArn = createListenerResponse.Listeners![0].ListenerArn!;
+  }
+  return listenerArn;
+}
+
+async function deleteListener(
+  loadBalancerArn: string,
+) {
+  const describeListenersCommand = new DescribeListenersCommand({ LoadBalancerArn: loadBalancerArn });
+  const oldListenersResponse = await albClient.send(describeListenersCommand);
+  if (oldListenersResponse && oldListenersResponse.Listeners && oldListenersResponse.Listeners.length > 0) {
+    oldListenersResponse.Listeners.forEach(async (listener) => {
+      const listenerArn = listener.ListenerArn;
+      const deleteListenerCommand = new DeleteListenerCommand({ ListenerArn: listenerArn });
+      await albClient.send(deleteListenerCommand);
+      logger.info('Deleting old listener: ' + listenerArn);
+    });
+  }
+  await waitForListenerDeletion(loadBalancerArn);
+}
+
+async function waitForListenerDeletion(
+  loadBalancerArn: string,
+  maxAttempts = 20, delay = 15000) {
+  let attempts = 0;
+  while (attempts < maxAttempts) {
+    attempts++;
+    const describeListenersCommand = new DescribeListenersCommand({ LoadBalancerArn: loadBalancerArn });
+    const oldListenersResponse = await albClient.send(describeListenersCommand);
+    if (oldListenersResponse && oldListenersResponse.Listeners && oldListenersResponse.Listeners.length > 0) {
+      console.log('Listener has been successfully deleted.');
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  throw new Error(`Listener deletion was not confirmed within the expected time frame, loadBalancerArn: ${loadBalancerArn}`);
+}
+
+async function handleUpdateRules(
+  inputPros: HandleUpdateInput,
+) {
+  if (inputPros.authenticationSecretArn !== inputPros.oldAuthenticationSecretArn) {
+    await deleteAllRules(inputPros.listenerArn);
+    // create new rules
+    await createDefaultForwardRule(
+      inputPros.listenerArn,
+      inputPros.protocol,
+      inputPros.endpointPath,
+      inputPros.hostHeader,
+      inputPros.authenticationSecretArn,
+      inputPros.targetGroupArn,
+    );
+
+    if (inputPros.authenticationSecretArn && inputPros.authenticationSecretArn.length > 0) {
+      await createAuthLogindRule(inputPros.authenticationSecretArn, inputPros.listenerArn);
+    }
+  } else {
+    if (inputPros.endpointPath !== inputPros.oldEndpointPath || inputPros.hostHeader !== inputPros.oldHostHeader) {
+      await updateEndpointPathAndHostHeader(
+        inputPros.listenerArn,
+        inputPros.endpointPath,
+        inputPros.hostHeader,
+        inputPros.oldEndpointPath,
+        inputPros.protocol,
+      );
+    }
   }
 }
 
-async function handleUpdate(
-  inputPros: HandleUpdateInput,
-) {
-  if (inputPros.endpointPath !== inputPros.oldEndpointPath || inputPros.hostHeader !== inputPros.oldHostHeader) {
-    await updateEndpointPathAndHostHeader(
-      inputPros.listenerArn,
-      inputPros.endpointPath,
-      inputPros.hostHeader,
-      inputPros.oldEndpointPath,
-      inputPros.oldHostHeader,
-      inputPros.protocol,
-    );
-  }
-
-  if (inputPros.authenticationSecretArn !== inputPros.oldAuthenticationSecretArn) {
-    await updateAuthenticationSecretArn(inputPros.listenerArn, inputPros.authenticationSecretArn);
-  }
+async function deleteAllRules(listenerArn: string) {
+  const describeRulesCommand = new DescribeRulesCommand({
+    ListenerArn: listenerArn,
+  });
+  const allAlbRulesResponse = await albClient.send(describeRulesCommand);
+  const allAlbRules: Rule[] = allAlbRulesResponse.Rules?.filter(rule => !rule.IsDefault) || [];
+  await deleteRules(allAlbRules);
 }
 
 async function updateEndpointPathAndHostHeader(
@@ -173,7 +403,6 @@ async function updateEndpointPathAndHostHeader(
   endpointPath: string,
   hostHeader: string,
   oldEndpointPath: string,
-  oldHostHeader: string,
   protocol: string,
 ) {
   const allExistingPathPatternRules = await getExistingRulesByEndpointPath(listenerArn, oldEndpointPath);
@@ -189,113 +418,7 @@ async function updateEndpointPathAndHostHeader(
     });
     await albClient.send(modifyCommand);
   }
-
-  if (hostHeader !== oldHostHeader) {
-    const pingPathRule = await getExistingRulesByEndpointPath(listenerArn, process.env.PING_PATH!);
-    if (!pingPathRule) return;
-    for (const rule of pingPathRule) {
-      if (!rule.Conditions) continue;
-      const modifyCommand = new ModifyRuleCommand({
-        RuleArn: rule.RuleArn,
-        Conditions: [
-          ...generateBaseForwardConditions(protocol, process.env.PING_PATH!, hostHeader),
-          ...rule.Conditions.filter((condition) => condition.Field !== 'path-pattern' && condition.Field !== 'host-header'),
-        ],
-      });
-      await albClient.send(modifyCommand);
-    }
-  }
 }
-
-async function updateAuthenticationSecretArn(
-  listenerArn: string,
-  authenticationSecretArn: string,
-) {
-  const rulesWithActionTypeIsAuthenticateOidc = await getRulesWithActionTypeIsAuthenticateOidc(listenerArn);
-  const { issuer, userEndpoint, authorizationEndpoint, tokenEndpoint, appClientId, appClientSecret } = await getOidcInfo(authenticationSecretArn);
-  if (!rulesWithActionTypeIsAuthenticateOidc) return;
-  for (const rule of rulesWithActionTypeIsAuthenticateOidc) {
-    if (rule.Conditions?.some(condition => condition.Field === 'path-pattern' && condition.Values?.includes('/login'))) {
-      const authLoginActions = [
-        {
-          Type: ActionTypeEnum.AUTHENTICATE_OIDC,
-          Order: 1,
-          AuthenticateOidcConfig: {
-            ...createAuthenticateOidcConfig(issuer, userEndpoint, authorizationEndpoint, tokenEndpoint, appClientId, appClientSecret),
-            OnUnauthenticatedRequest: AuthenticateCognitoActionConditionalBehaviorEnum.AUTHENTICATE,
-          },
-        },
-        {
-          Type: ActionTypeEnum.FIXED_RESPONSE,
-          Order: 2,
-          FixedResponseConfig: {
-            MessageBody: 'Authenticated',
-            StatusCode: '200',
-            ContentType: 'text/plain',
-          },
-        },
-      ];
-      const modifyCommand = new ModifyRuleCommand({
-        RuleArn: rule.RuleArn,
-        Actions: authLoginActions,
-      });
-      await albClient.send(modifyCommand);
-    } else {
-      const authForwardActions = [
-        {
-          Type: ActionTypeEnum.AUTHENTICATE_OIDC,
-          Order: 1,
-          AuthenticateOidcConfig: {
-            ...createAuthenticateOidcConfig(issuer, userEndpoint, authorizationEndpoint, tokenEndpoint, appClientId, appClientSecret),
-            OnUnauthenticatedRequest: AuthenticateCognitoActionConditionalBehaviorEnum.DENY,
-          },
-        },
-        {
-          Type: ActionTypeEnum.FORWARD,
-          Order: 2,
-          TargetGroupArn: rule.Actions?.find(action => action.Type === ActionTypeEnum.FORWARD)?.TargetGroupArn,
-        },
-      ];
-      const modifyCommand = new ModifyRuleCommand({
-        RuleArn: rule.RuleArn,
-        Actions: authForwardActions,
-      });
-      await albClient.send(modifyCommand);
-    }
-  }
-}
-
-function createAuthenticateOidcConfig(
-  issuer: string,
-  userEndpoint: string,
-  authorizationEndpoint: string,
-  tokenEndpoint: string,
-  appClientId: string,
-  appClientSecret: string,
-) {
-  const authenticateOidcConfig = {
-    Issuer: issuer,
-    ClientId: appClientId,
-    ClientSecret: appClientSecret,
-    TokenEndpoint: tokenEndpoint,
-    UserInfoEndpoint: userEndpoint,
-    AuthorizationEndpoint: authorizationEndpoint,
-  };
-  return authenticateOidcConfig;
-}
-
-async function getRulesWithActionTypeIsAuthenticateOidc(listenerArn: string) {
-  const describeRulesCommand = new DescribeRulesCommand({
-    ListenerArn: listenerArn,
-  });
-  const allAlbRulesResponse = await albClient.send(describeRulesCommand);
-  const allAlbRules: Rule[] = allAlbRulesResponse.Rules?.filter(rule => !rule.IsDefault) || [];
-  const rulesWithActionTypeIsAuthenticateOidc = allAlbRules.filter(rule =>
-    rule.Actions?.some(action => action.Type === ActionTypeEnum.AUTHENTICATE_OIDC),
-  );
-  return rulesWithActionTypeIsAuthenticateOidc;
-}
-
 
 async function handleClickStreamSDK(input: HandleClickStreamSDKInput) {
   const shouldDeleteRules = [];
@@ -399,9 +522,8 @@ async function getFixedResponseAndDefaultActionRules(listenerArn: string) {
     parseInt(rule.Priority!) === 1,
   );
   const defaultActionRules = allAlbRules.filter(rule =>
-    parseInt(rule.Priority!) === 2 || parseInt(rule.Priority!) === 3,
+    parseInt(rule.Priority!) === 2,
   );
-
   return { fixedResponseRules, defaultActionRules };
 }
 
@@ -429,6 +551,7 @@ async function createAppIdRules(
 ) {
   const allExistingAppIdRules = await getAllExistingAppIdRules(listenerArn);
 
+  const baseForwardConditions = generateBaseForwardConditions(protocol, endpointPath, domainName);
   const forwardActions = await generateForwardActions(authenticationSecretArn, targetGroupArn);
   const allPriorities = allExistingAppIdRules.map(rule => parseInt(rule.Priority!));
   const existingAppIds = getAllExistingAppIds(allExistingAppIdRules);
@@ -437,32 +560,18 @@ async function createAppIdRules(
     if (existingAppIds.includes(appId)) {
       continue; // skip to the next iteration of the loop
     }
+    const priority = createPriority(allPriorities);
     const appIdConditions = generateAppIdCondition(appId);
-
-    let priority = createPriority(allPriorities);
-    const baseForwardConditions = generateBaseForwardConditions(protocol, endpointPath, domainName);
     //@ts-ignore
-    baseForwardConditions.push(...appIdConditions);
+    appIdConditions.push(...baseForwardConditions);
     // Create a rule just contains mustConditions
     const createRuleCommand = new CreateRuleCommand({
       ListenerArn: listenerArn,
       Actions: forwardActions,
-      Conditions: baseForwardConditions,
+      Conditions: appIdConditions,
       Priority: priority,
     });
     await albClient.send(createRuleCommand);
-
-    priority = createPriority(allPriorities);
-    const pingPathRuleConditions = generateBaseForwardConditions(protocol, process.env.PING_PATH!, domainName);
-    //@ts-ignore
-    pingPathRuleConditions.push(...appIdConditions);
-    const createPingPathRuleCommand = new CreateRuleCommand({
-      ListenerArn: listenerArn,
-      Actions: forwardActions,
-      Conditions: pingPathRuleConditions,
-      Priority: priority,
-    });
-    await albClient.send(createPingPathRuleCommand);
   }
 }
 
@@ -499,7 +608,7 @@ async function getAllExistingAppIdRules(listenerArn: string) {
   const allAlbRulesResponse = await albClient.send(describeRulesCommand);
   const allAlbRules: Rule[] = allAlbRulesResponse.Rules?.filter(rule => !rule.IsDefault) || [];
   const allExistingAppIdRules = allAlbRules.filter(rule =>
-    parseInt(rule.Priority!) > 4,
+    parseInt(rule.Priority!) > 3,
   );
   return allExistingAppIdRules;
 }
@@ -529,8 +638,6 @@ async function createDefaultForwardRule(
   targetGroupArn: string) {
   const defaultForwardConditions = generateBaseForwardConditions(protocol, endpointPath, domainName);
 
-  logger.info('mingtong step 1 defaultForwardConditions', { defaultForwardConditions });
-
   const defaultForwardActions = await generateForwardActions(authenticationSecretArn, targetGroupArn);
 
   const createForwardRuleCommand = new CreateRuleCommand({
@@ -540,19 +647,6 @@ async function createDefaultForwardRule(
     Priority: 2,
   });
   await albClient.send(createForwardRuleCommand);
-  logger.info('mingtong step 2 createForwardRuleCommand', { createForwardRuleCommand });
-
-  const pingPathRuleConditions = generateBaseForwardConditions(protocol, process.env.PING_PATH!, domainName);
-
-  logger.info('mingtong step 3 pingPathRuleConditions', { pingPathRuleConditions });
-  const createPingPathRuleCommand = new CreateRuleCommand({
-    ListenerArn: listenerArn,
-    Actions: defaultForwardActions,
-    Conditions: pingPathRuleConditions,
-    Priority: 3,
-  });
-  await albClient.send(createPingPathRuleCommand);
-  logger.info('mingtong step 4 createPingPathRuleCommand', { createPingPathRuleCommand });
 }
 
 async function generateForwardActions(
@@ -631,7 +725,7 @@ async function createAuthLogindRule(authenticationSecretArn: string, listenerArn
     ListenerArn: listenerArn,
     Actions: authLoginActions,
     Conditions: authLoginCondition,
-    Priority: 4,
+    Priority: 3,
   });
   await albClient.send(createAuthLoginRuleCommand);
 }
@@ -690,7 +784,7 @@ async function getOidcInfo(authenticationSecretArn: string) {
 }
 
 function createPriority(allPriorities: Array<number>) {
-  let priority = 5;
+  let priority = 4;
   while (allPriorities.includes(priority)) {
     priority++;
   }

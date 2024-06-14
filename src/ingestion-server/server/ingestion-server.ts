@@ -37,6 +37,7 @@ import { createALBSecurityGroup, createECSSecurityGroup } from './private/sg';
 import { LogProps } from '../../common/alb';
 import { deleteECSClusterCustomResource } from '../custom-resource/delete-ecs-cluster';
 import { updateAlbRulesCustomResource } from '../custom-resource/update-alb-rules';
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 
 export const RESOURCE_ID_PREFIX = 'clickstream-ingestion-service-';
 
@@ -50,7 +51,7 @@ export const DefaultFleetProps = {
   workerCpu: 1792,
   proxyCpu: 256,
   instanceType: new InstanceType('c6i.large'),
-  isArm: false,
+  arch: Platform.LINUX_AMD64,
   warmPoolSize: 0,
   proxyReservedMemory: 900,
   workerReservedMemory: 900,
@@ -85,7 +86,7 @@ export interface FleetProps {
   readonly taskMax: number;
   readonly scaleOnCpuUtilizationPercent?: number;
   readonly instanceType?: InstanceType;
-  readonly isArm?: boolean;
+  readonly arch: Platform;
   readonly warmPoolSize?: number;
   readonly proxyReservedMemory?: number;
   readonly proxyCpu?: number;

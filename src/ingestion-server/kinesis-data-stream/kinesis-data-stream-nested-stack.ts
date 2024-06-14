@@ -43,10 +43,10 @@ import { SINK_TYPE_MODE } from '../../common/model';
 import { getExistVpc } from '../../common/vpc-utils';
 
 export interface CreateKinesisNestStackProps {
-  projectIdParam: CfnParameter;
-  vpcIdParam: CfnParameter;
-  privateSubnetIdsParam: CfnParameter;
-  sinkType?: string;
+  projectId: string;  
+  vpcId: string;
+  privateSubnetIds: string;
+  sinkType: string;
   kinesisParams: {
     kinesisDataS3BucketParam: CfnParameter;
     kinesisDataS3PrefixParam: CfnParameter;
@@ -64,9 +64,9 @@ export function createKinesisNestStack(
 ) {
   // Vpc
   const vpc = getExistVpc(scope, 'from-vpc-for-kinesis', {
-    vpcId: props.vpcIdParam.valueAsString,
+    vpcId: props.vpcId,
     availabilityZones: Fn.getAzs(),
-    privateSubnetIds: Fn.split(',', props.privateSubnetIdsParam.valueAsString),
+    privateSubnetIds: Fn.split(',', props.privateSubnetIds),
   });
 
   const dataS3Bucket = Bucket.fromBucketName(
@@ -109,7 +109,7 @@ export function createKinesisNestStack(
   };
 
   const p = {
-    projectId: props.projectIdParam.valueAsString,
+    projectId: props.projectId,
     vpc,
     subnetSelection,
     dataRetentionHours: props.kinesisParams.kinesisDataRetentionHoursParam.valueAsNumber,
@@ -119,7 +119,6 @@ export function createKinesisNestStack(
     maxBatchingWindowSeconds,
     startingPosition: StartingPosition.LATEST,
   };
-
 
   // ON_DEMAND
   const onDemandStack = new KinesisDataStreamToS3NestedStack(

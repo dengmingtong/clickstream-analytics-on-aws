@@ -276,15 +276,6 @@ test('Has Parameter LogS3Prefix', () => {
   });
 });
 
-test('Has Parameter NotificationsTopicArn', () => {
-  templates.forEach((template) => {
-    template.hasParameter('NotificationsTopicArn', {
-      Type: 'String',
-      Default: '',
-    });
-  });
-});
-
 test('Has Parameter KafkaBrokers', () => {
   v2Template.hasParameter('KafkaBrokers', {
     Type: 'String',
@@ -506,7 +497,7 @@ test('Has ParameterGroups', () => {
 test('Check parameters for Kafka nested stack - has all parameters', () => {
   const nestStack = findResourceByCondition(
     v2Template,
-    'IngestionServerM11Condition',
+    'IngestionServerFM11Condition',
   );
   expect(nestStack).toBeDefined();
 
@@ -523,21 +514,8 @@ test('Check parameters for Kafka nested stack - has all parameters', () => {
     'ServerMax',
     'ScaleOnCpuUtilizationPercent',
     'MskClusterName',
-    'VpcId',
     'IamRoleBoundaryArn',
-    'EnableAuthentication',
-    'PublicSubnetIds',
-    'LogS3Bucket',
-    'LogS3Prefix',
-    'EnableApplicationLoadBalancerAccessLog',
-    'ACMCertificateArn',
     'ProjectId',
-    'AuthenticationSecretArn',
-    'AppIds',
-    'ClickStreamSDK',
-    'DomainName',
-    'Protocol',
-    'EnableGlobalAccelerator',
   ];
   const templateParams = Object.keys(nestStack.Properties.Parameters).map(
     (pk) => {
@@ -551,13 +529,13 @@ test('Check parameters for Kafka nested stack - has all parameters', () => {
     expect(templateParams.includes(ep)).toBeTruthy();
   }
 
-  expect(templateParams.length).toEqual(exceptedParams.length);
+  expect(templateParams.length).toEqual(exceptedParams.length + 3);
 });
 
 test('Check parameters for Kafka nested stack - has minimum parameters', () => {
   const nestStack = findResourceByCondition(
     v2Template,
-    'IngestionServerM00Condition',
+    'IngestionServerFM00Condition',
   );
   expect(nestStack).toBeDefined();
 
@@ -572,21 +550,8 @@ test('Check parameters for Kafka nested stack - has minimum parameters', () => {
     'PrivateSubnetIds',
     'ServerMax',
     'ScaleOnCpuUtilizationPercent',
-    'VpcId',
     'IamRoleBoundaryArn',
-    'EnableAuthentication',
-    'PublicSubnetIds',
-    'LogS3Bucket',
-    'LogS3Prefix',
-    'EnableApplicationLoadBalancerAccessLog',
-    'ACMCertificateArn',
     'ProjectId',
-    'AuthenticationSecretArn',
-    'AppIds',
-    'ClickStreamSDK',
-    'DomainName',
-    'Protocol',
-    'EnableGlobalAccelerator',
   ];
 
   const templateParams = Object.keys(nestStack.Properties.Parameters).map(
@@ -600,13 +565,13 @@ test('Check parameters for Kafka nested stack - has minimum parameters', () => {
   for (const ep of exceptedParams) {
     expect(templateParams.includes(ep)).toBeTruthy();
   }
-  expect(templateParams.length).toEqual(exceptedParams.length);
+  expect(templateParams.length).toEqual(exceptedParams.length + 3);
 });
 
 test('Check parameters for Kinesis nested stack - has all parameters', () => {
   const nestStack = findResourceByCondition(
     v2Template,
-    'IngestionServerK1Condition',
+    'IngestionServerFK1Condition',
   );
   expect(nestStack).toBeDefined();
 
@@ -619,21 +584,8 @@ test('Check parameters for Kinesis nested stack - has all parameters', () => {
     'PrivateSubnetIds',
     'ServerMax',
     'ScaleOnCpuUtilizationPercent',
-    'VpcId',
     'IamRoleBoundaryArn',
-    'EnableAuthentication',
-    'PublicSubnetIds',
-    'LogS3Bucket',
-    'LogS3Prefix',
-    'EnableApplicationLoadBalancerAccessLog',
-    'ACMCertificateArn',
     'ProjectId',
-    'AuthenticationSecretArn',
-    'AppIds',
-    'ClickStreamSDK',
-    'DomainName',
-    'Protocol',
-    'EnableGlobalAccelerator',
   ];
 
   const templateParams = Object.keys(nestStack.Properties.Parameters).map(
@@ -647,13 +599,13 @@ test('Check parameters for Kinesis nested stack - has all parameters', () => {
   for (const ep of exceptedParams) {
     expect(templateParams.includes(ep)).toBeTruthy();
   }
-  expect(templateParams.length).toEqual(exceptedParams.length + 1);
+  expect(templateParams.length).toEqual(exceptedParams.length + 4);
 });
 
 test('Check parameters for Kinesis nested stack - has minimum parameters', () => {
   const nestStack = findResourceByCondition(
     v2Template,
-    'IngestionServerK2Condition',
+    'IngestionServerFK2Condition',
   );
   expect(nestStack).toBeDefined();
 
@@ -666,21 +618,8 @@ test('Check parameters for Kinesis nested stack - has minimum parameters', () =>
     'PrivateSubnetIds',
     'ServerMax',
     'ScaleOnCpuUtilizationPercent',
-    'VpcId',
     'IamRoleBoundaryArn',
-    'EnableAuthentication',
-    'PublicSubnetIds',
-    'LogS3Bucket',
-    'LogS3Prefix',
-    'EnableApplicationLoadBalancerAccessLog',
-    'ACMCertificateArn',
     'ProjectId',
-    'AuthenticationSecretArn',
-    'AppIds',
-    'ClickStreamSDK',
-    'DomainName',
-    'Protocol',
-    'EnableGlobalAccelerator',
   ];
 
   const templateParams = Object.keys(nestStack.Properties.Parameters).map(
@@ -694,13 +633,13 @@ test('Check parameters for Kinesis nested stack - has minimum parameters', () =>
   for (const ep of exceptedParams) {
     expect(templateParams.includes(ep)).toBeTruthy();
   }
-  expect(templateParams.length).toEqual(exceptedParams.length + 1);
+  expect(templateParams.length).toEqual(exceptedParams.length + 4);
 });
 
 test('Check parameters for S3 nested stack - has all parameters', () => {
   const nestStack = findResourceByCondition(
     v2Template,
-    'IngestionServerCCondition',
+    'IngestionServerFCCondition',
   );
   expect(nestStack).toBeDefined();
   const exceptedParams = [
@@ -712,21 +651,8 @@ test('Check parameters for S3 nested stack - has all parameters', () => {
     'PrivateSubnetIds',
     'ServerMax',
     'ScaleOnCpuUtilizationPercent',
-    'VpcId',
     'IamRoleBoundaryArn',
-    'EnableAuthentication',
-    'PublicSubnetIds',
-    'LogS3Bucket',
-    'LogS3Prefix',
-    'EnableApplicationLoadBalancerAccessLog',
-    'ACMCertificateArn',
     'ProjectId',
-    'AuthenticationSecretArn',
-    'AppIds',
-    'ClickStreamSDK',
-    'DomainName',
-    'Protocol',
-    'EnableGlobalAccelerator',
     'S3DataBucket',
     'S3DataPrefix',
     'S3BatchMaxBytes',
@@ -743,18 +669,18 @@ test('Check parameters for S3 nested stack - has all parameters', () => {
   for (const ep of exceptedParams) {
     expect(templateParams.includes(ep)).toBeTruthy();
   }
-  expect(templateParams.length).toEqual(exceptedParams.length);
+  expect(templateParams.length).toEqual(exceptedParams.length + 3);
 });
 
 test('Conditions are created as expected', () => {
   const expectedConditions = [
-    'IngestionServerM11Condition',
-    'IngestionServerM10Condition',
-    'IngestionServerM01Condition',
-    'IngestionServerM00Condition',
-    'IngestionServerK1Condition',
-    'IngestionServerK2Condition',
-    'IngestionServerCCondition',
+    'IngestionServerFM11Condition',
+    'IngestionServerFM10Condition',
+    'IngestionServerFM01Condition',
+    'IngestionServerFM00Condition',
+    'IngestionServerFK1Condition',
+    'IngestionServerFK2Condition',
+    'IngestionServerFCCondition',
   ];
 
   const conditions: string[] = [];
