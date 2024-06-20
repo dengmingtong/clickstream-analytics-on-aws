@@ -172,7 +172,7 @@ export class IngestionServerV2 extends Construct {
       });
     }
 
-    deleteECSCluster(
+    createDeleteECSClusterHook(
       this,
       ecsCluster.ecsCluster.clusterArn,
       ecsCluster.ecsCluster.clusterName,
@@ -181,7 +181,7 @@ export class IngestionServerV2 extends Construct {
   }
 }
 
-function deleteECSCluster(scope: Construct, ecsClusterArn: string, ecsClusterName: string, ecsServiceName: string) {
+function createDeleteECSClusterHook(scope: Construct, ecsClusterArn: string, ecsClusterName: string, ecsServiceName: string) {
   deleteECSClusterCustomResource(scope, {
     ecsClusterArn,
     ecsClusterName,

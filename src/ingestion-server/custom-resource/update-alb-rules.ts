@@ -126,6 +126,7 @@ function createUpdateAlbRulesLambda(scope: Construct, listenerArn: string, input
     role,
   });
   fn.node.addDependency(role);
+  fn.node.addDependency(authPolicy);
   addCfnNagSuppressRules(fn.node.defaultChild as CfnResource,
     rulesToSuppressForLambdaVPCAndReservedConcurrentExecutions('UpdateALBRule'),
   );

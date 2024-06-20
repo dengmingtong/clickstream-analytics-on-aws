@@ -64,7 +64,7 @@ export interface NetworkProps {
 };
 
 export interface S3BucketProps {
-  readonly s3BucketName: string;
+  readonly bucketName: string;
   readonly prefix: string;
 }
 
@@ -149,7 +149,7 @@ export class IngestionServerV2NestedStack extends NestedStack {
       mskSecurityGroupId: props.kafkaBufferProps?.mskSecurityGroupId,
       mskClusterName: props.kafkaBufferProps?.mskClusterName,
       kinesisDataStreamArn: props.kinesisBufferProps?.kinesisDataStreamArn,
-      s3BucketName: props.s3BufferProps?.s3Bucket.s3BucketName,
+      s3BucketName: props.s3BufferProps?.s3Bucket.bucketName,
       s3Prefix: props.s3BufferProps?.s3Bucket.prefix,
       batchMaxBytes: props.s3BufferProps?.batchMaxBytes,
       batchTimeout: props.s3BufferProps?.batchTimeout,
@@ -305,7 +305,7 @@ export class IngestionServerStackV2 extends Stack {
     const domainName = domainNameParam.valueAsString;
     const enableApplicationLoadBalancerAccessLog = enableApplicationLoadBalancerAccessLogParam.valueAsString;
     const logBucket = {
-      s3BucketName: logS3BucketParam.valueAsString,
+      bucketName: logS3BucketParam.valueAsString,
       prefix: logS3PrefixParam.valueAsString,
     };
     const serverCapability = {

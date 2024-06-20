@@ -55,14 +55,15 @@ interface HandleClickStreamSDKInput {
 interface HandleUpdateInput {
   readonly listenerArn: string;
   readonly protocol: string;
+  readonly newUpdateProps: UpdatePropType;
+  readonly oldUpdateProps: UpdatePropType;
+}
+
+interface UpdatePropType {
   readonly endpointPath: string;
   readonly hostHeader: string;
   readonly enableAuthentication: string;
   readonly authenticationSecretArn: string;
-  readonly oldEndpointPath: string;
-  readonly oldHostHeader: string;
-  readonly oldEnableAuthentication: string;
-  readonly oldAuthenticationSecretArn: string;
 }
 
 type ResourceEvent = CloudFormationCustomResourceEvent;
@@ -108,17 +109,25 @@ async function _handler(
     const oldDomainName = oldProps.domainName;
     const oldAuthenticationSecretArn = oldProps.authenticationSecretArn;
     const oldEnableAuthentication = oldProps.enableAuthentication;
-    await handleUpdate({
-      listenerArn,
-      protocol,
+
+    const newUpdateProps: UpdatePropType = {
       endpointPath,
       hostHeader: domainName,
       enableAuthentication,
       authenticationSecretArn,
-      oldEndpointPath,
-      oldEnableAuthentication,
-      oldHostHeader: oldDomainName,
-      oldAuthenticationSecretArn,
+    };    
+
+    const oldUpdateProps: UpdatePropType = {
+      endpointPath: oldEndpointPath,
+      hostHeader: oldDomainName,
+      enableAuthentication: oldEnableAuthentication,
+      authenticationSecretArn: oldAuthenticationSecretArn,
+    };
+    await handleUpdate({
+      listenerArn,
+      protocol,
+      newUpdateProps,
+      oldUpdateProps,
     });
   }
 
@@ -171,32 +180,44 @@ async function handleCreate(
 async function handleUpdate(
   inputPros: HandleUpdateInput,
 ) {
-  if (inputPros.endpointPath !== inputPros.oldEndpointPath || inputPros.hostHeader !== inputPros.oldHostHeader) {
+  if (
+    inputPros.newUpdateProps.endpointPath !== inputPros.oldUpdateProps.endpointPath || 
+    inputPros.newUpdateProps.hostHeader !== inputPros.oldUpdateProps.hostHeader
+  ) {
     await updateEndpointPathAndHostHeader(
       inputPros.listenerArn,
-      inputPros.endpointPath,
-      inputPros.hostHeader,
-      inputPros.oldEndpointPath,
-      inputPros.oldHostHeader,
+      inputPros.newUpdateProps.endpointPath,
+      inputPros.newUpdateProps.hostHeader,
+      inputPros.oldUpdateProps.endpointPath,
+      inputPros.oldUpdateProps.hostHeader,
       inputPros.protocol,
     );
   }
 
   // update authentication
   if (
-    inputPros.enableAuthentication !== inputPros.oldEnableAuthentication ||
-    (inputPros.authenticationSecretArn !== inputPros.oldAuthenticationSecretArn && inputPros.enableAuthentication === 'Yes')
+    inputPros.newUpdateProps.enableAuthentication !== inputPros.oldUpdateProps.enableAuthentication ||
+    (
+      inputPros.newUpdateProps.authenticationSecretArn !== inputPros.oldUpdateProps.authenticationSecretArn && 
+      inputPros.newUpdateProps.enableAuthentication === 'Yes'
+    )
   ) {
-    await sleep(20000);
-    if (inputPros.enableAuthentication === 'Yes' && inputPros.oldEnableAuthentication === 'No') {
+    // await sleep(20000);
+    if (
+      inputPros.newUpdateProps.enableAuthentication === 'Yes' && 
+      inputPros.oldUpdateProps.enableAuthentication === 'No'
+    ) {
       // if enableAuthentication change from No to Yes, enable auth
-      await enableAuth(inputPros.listenerArn, inputPros.authenticationSecretArn);
-    } else if (inputPros.enableAuthentication === 'No' && inputPros.oldEnableAuthentication === 'Yes') {
+      await enableAuth(inputPros.listenerArn, inputPros.newUpdateProps.authenticationSecretArn);
+    } else if (
+      inputPros.newUpdateProps.enableAuthentication === 'No' && 
+      inputPros.oldUpdateProps.enableAuthentication === 'Yes'
+    ) {
       // if enableAuthentication change from Yes to No, disable auth
       await disableAuth(inputPros.listenerArn);
     } else {
       // enable auth and authentication secret arn changed
-      await updateAuthenticationSecretArn(inputPros.listenerArn, inputPros.authenticationSecretArn);
+      await updateAuthenticationSecretArn(inputPros.listenerArn, inputPros.newUpdateProps.authenticationSecretArn);
     }
   }
 }
@@ -407,14 +428,16 @@ async function handleClickStreamSDK(input: HandleClickStreamSDKInput) {
   if (input.requestType === 'Create' || input.requestType === 'Update') {
     if (appIdArray.length > 0) {
       await createAppIdRules(
-        input.listenerArn,
-        appIdArray,
-        input.protocol,
-        input.endpointPath,
-        input.domainName,
-        input.enableAuthentication,
-        input.authenticationSecretArn,
-        input.targetGroupArn,
+        {
+          listenerArn: input.listenerArn,
+          appIdArray: appIdArray,
+          protocol: input.protocol,
+          endpointPath: input.endpointPath,
+          domainName: input.domainName,
+          enableAuthentication: input.enableAuthentication,
+          authenticationSecretArn: input.authenticationSecretArn,
+          targetGroupArn: input.targetGroupArn,
+        }
       );
     }
   }
@@ -520,35 +543,39 @@ async function getDeleteAppIdRules(appIdArray: Array<string>, listenerArn: strin
   return shouldDeleteRules;
 }
 
-async function createAppIdRules(
-  listenerArn: string,
-  appIdArray: Array<string>,
-  protocol: string,
-  endpointPath: string,
-  domainName: string,
-  enableAuthentication: string,
-  authenticationSecretArn: string,
-  targetGroupArn: string,
-) {
-  const allExistingAppIdRules = await getAllExistingAppIdRules(listenerArn);
+interface CreateAppIdRulesInput {
+  listenerArn: string;
+  appIdArray: Array<string>;
+  protocol: string;
+  endpointPath: string;
+  domainName: string;
+  enableAuthentication: string;
+  authenticationSecretArn: string;
+  targetGroupArn: string;
+}
 
-  const forwardActions = await generateForwardActions(enableAuthentication, authenticationSecretArn, targetGroupArn);
+async function createAppIdRules(
+  input: CreateAppIdRulesInput,
+) {
+  const allExistingAppIdRules = await getAllExistingAppIdRules(input.listenerArn);
+
+  const forwardActions = await generateForwardActions(input.enableAuthentication, input.authenticationSecretArn, input.targetGroupArn);
   const allPriorities = allExistingAppIdRules.map(rule => parseInt(rule.Priority!));
   const existingAppIds = getAllExistingAppIds(allExistingAppIdRules);
 
-  for (const appId of appIdArray) {
+  for (const appId of input.appIdArray) {
     if (existingAppIds.includes(appId)) {
       continue; // skip to the next iteration of the loop
     }
     const appIdConditions = generateAppIdCondition(appId);
 
     let priority = createPriority(allPriorities);
-    const baseForwardConditions = generateBaseForwardConditions(protocol, endpointPath, domainName);
+    const baseForwardConditions = generateBaseForwardConditions(input.protocol, input.endpointPath, input.domainName);
     //@ts-ignore
     baseForwardConditions.push(...appIdConditions);
     // Create a rule just contains mustConditions
     const createRuleCommand = new CreateRuleCommand({
-      ListenerArn: listenerArn,
+      ListenerArn: input.listenerArn,
       Actions: forwardActions,
       Conditions: baseForwardConditions,
       Priority: priority,
@@ -556,11 +583,11 @@ async function createAppIdRules(
     await albClient.send(createRuleCommand);
 
     priority = createPriority(allPriorities);
-    const pingPathRuleConditions = generateBaseForwardConditions(protocol, process.env.PING_PATH!, domainName);
+    const pingPathRuleConditions = generateBaseForwardConditions(input.protocol, process.env.PING_PATH!, input.domainName);
     //@ts-ignore
     pingPathRuleConditions.push(...appIdConditions);
     const createPingPathRuleCommand = new CreateRuleCommand({
-      ListenerArn: listenerArn,
+      ListenerArn: input.listenerArn,
       Actions: forwardActions,
       Conditions: pingPathRuleConditions,
       Priority: priority,
