@@ -305,6 +305,22 @@ export PATH=$(npm bin):$PATH
 
 
 echo "------------------------------------------------------------------------------"
+echo "copy ecr image to the deployment folder"
+echo "------------------------------------------------------------------------------"
+image_root_dir="$template_dir/ecr"
+do_cmd mkdir -p $image_root_dir
+
+# copy nginx image to the deployment folder
+nginx_image_source_path="$source_dir/src/ingestion-server/server/images/nginx"
+nginx_image_dist_path="$image_root_dir/clickstream-nginx"
+do_cmd cp -rf $nginx_image_source_path $nginx_image_dist_path
+
+# copy vector image to the deployment folder
+vector_image_source_path="$source_dir/src/ingestion-server/server/images/vector"
+vector_image_dist_path="$image_root_dir/clickstream-vector"
+do_cmd cp -rf $vector_image_source_path $vector_image_dist_path
+
+echo "------------------------------------------------------------------------------"
 echo "${bold}[Create] Templates${normal}"
 echo "------------------------------------------------------------------------------"
 
@@ -337,9 +353,11 @@ do_replace "*.template.json" %%BUCKET_NAME%% ${SOLUTION_BUCKET}
 do_replace "*.template.json" %%SOLUTION_NAME%% ${SOLUTION_TRADEMARKEDNAME}
 do_replace "*.template.json" %%VERSION%% ${VERSION}
 do_replace "*.template.json" %%TEMPLATE_OUTPUT_BUCKET%% ${TEMPLATE_OUTPUT_BUCKET}
-do_replace "*.template.json" %%SOLUTION_ECR_ACCOUNT%% ${SOLUTION_ECR_ACCOUNT}
-do_replace "*.template.json" %%SOLUTION_ECR_REPO_NAME%% ${SOLUTION_ECR_REPO_NAME}
-do_replace "*.template.json" %%SOLUTION_ECR_BUILD_VERSION%% ${SOLUTION_ECR_BUILD_VERSION}
+# do_replace "*.template.json" %%SOLUTION_ECR_ACCOUNT%% ${SOLUTION_ECR_ACCOUNT}
+# do_replace "*.template.json" %%SOLUTION_ECR_REPO_NAME%% ${SOLUTION_ECR_REPO_NAME}
+# do_replace "*.template.json" %%SOLUTION_ECR_BUILD_VERSION%% ${SOLUTION_ECR_BUILD_VERSION}
+do_replace "*.template.json" %%PUBLIC_ECR_REGISTRY%% ${$PUBLIC_ECR_REGISTRY}
+do_replace "*.template.json" %%PUBLIC_ECR_TAG%% ${$PUBLIC_ECR_TAG}
 
 
 for cn_template in ${SOLUTION_CN_TEMPLATES[@]}; do 
