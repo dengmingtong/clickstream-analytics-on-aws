@@ -1,6 +1,5 @@
 ARG PLATFORM_ARG
-# FROM --platform=$PLATFORM_ARG timberio/vector:0.34.1-debian
-FROM --platform=linux/amd64 timberio/vector:0.34.1-debian
+FROM --platform=$PLATFORM_ARG timberio/vector:0.34.1-debian
 
 ENV AWS_REGION='__NOT_SET__'
 ENV AWS_MSK_BROKERS='__NOT_SET__'

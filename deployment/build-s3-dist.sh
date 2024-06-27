@@ -234,6 +234,13 @@ else
     export SOLUTION_ECR_REPO_NAME
 fi
 
+if [[ -z $SOLUTION_ECR_IMAGE_PLATFORM ]]; then
+    echo "SOLUTION_ECR_IMAGE_PLATFORM is missing from ../solution_config"
+    exit 1
+else 
+    export SOLUTION_ECR_IMAGE_PLATFORM
+fi
+
 if [[ -z ${SOLUTION_CN_TEMPLATES[@]} ]]; then
     echo "SOLUTION_CN_TEMPLATES is missing from ../solution_config"
     exit 1
@@ -322,11 +329,13 @@ do_cmd mkdir -p $image_root_dir
 nginx_image_source_path="$source_dir/src/ingestion-server/server/images/nginx"
 nginx_image_dist_path="$image_root_dir/clickstream-nginx"
 do_cmd cp -rf $nginx_image_source_path $nginx_image_dist_path
+do_replace $nginx_image_dist_path/Dockerfile \$PLATFORM_ARG ${SOLUTION_ECR_IMAGE_PLATFORM}
 
 # copy vector image to the deployment folder
 vector_image_source_path="$source_dir/src/ingestion-server/server/images/vector"
 vector_image_dist_path="$image_root_dir/clickstream-vector"
 do_cmd cp -rf $vector_image_source_path $vector_image_dist_path
+do_replace $vector_image_dist_path/Dockerfile \$PLATFORM_ARG ${SOLUTION_ECR_IMAGE_PLATFORM}
 
 echo "------------------------------------------------------------------------------"
 echo "${bold}[Create] Templates${normal}"
@@ -361,9 +370,6 @@ do_replace "*.template.json" %%BUCKET_NAME%% ${SOLUTION_BUCKET}
 do_replace "*.template.json" %%SOLUTION_NAME%% ${SOLUTION_TRADEMARKEDNAME}
 do_replace "*.template.json" %%VERSION%% ${VERSION}
 do_replace "*.template.json" %%TEMPLATE_OUTPUT_BUCKET%% ${TEMPLATE_OUTPUT_BUCKET}
-# do_replace "*.template.json" %%SOLUTION_ECR_ACCOUNT%% ${SOLUTION_ECR_ACCOUNT}
-# do_replace "*.template.json" %%SOLUTION_ECR_REPO_NAME%% ${SOLUTION_ECR_REPO_NAME}
-# do_replace "*.template.json" %%SOLUTION_ECR_BUILD_VERSION%% ${SOLUTION_ECR_BUILD_VERSION}
 do_replace_1 "*.template.json" %%PUBLIC_ECR_REGISTRY%% ${PUBLIC_ECR_REGISTRY}
 do_replace "*.template.json" %%PUBLIC_ECR_TAG%% ${PUBLIC_ECR_TAG}
 
