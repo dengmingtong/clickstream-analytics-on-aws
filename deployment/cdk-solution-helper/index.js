@@ -163,7 +163,7 @@ fs.readdirSync(global_s3_assets).forEach(file => {
 
   updateECRImagesForECSTaskDefinition(template);
   updateECRImagesForLambda(template);
-  updateECSTaskExecutionRolePolicy(template);
+  // updateECSTaskExecutionRolePolicy(template);
 
 
   // Clean-up parameters section
@@ -228,40 +228,40 @@ function updateECRImagesForLambda(template) {
   }
 }
 
-function updateECSTaskExecutionRolePolicy(template) {
-  const {
-    resource: executionRolePolicy,
-    key
-  } = getFirstResource(template, "AWS::IAM::Policy", "/ExecutionRole/DefaultPolicy/Resource");
+// function updateECSTaskExecutionRolePolicy(template) {
+//   const {
+//     resource: executionRolePolicy,
+//     key
+//   } = getFirstResource(template, "AWS::IAM::Policy", "/ExecutionRole/DefaultPolicy/Resource");
 
-  if (!executionRolePolicy) {
-    return;
-  }
-  executionRolePolicy.Properties.PolicyDocument.Statement.push({
-    "Action": [
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:GetDownloadUrlForLayer",
-      "ecr:BatchGetImage"
-    ],
-    "Effect": "Allow",
-    "Resource": {
-      "Fn::Join": [
-        "",
-        [
-          "arn:",
-          {
-            "Ref": "AWS::Partition"
-          },
-          ":ecr:",
-          {
-            "Ref": "AWS::Region"
-          },
-          `:%%SOLUTION_ECR_ACCOUNT%%:repository/%%SOLUTION_ECR_REPO_NAME%%`
-        ]
-      ]
-    }
-  });
-}
+//   if (!executionRolePolicy) {
+//     return;
+//   }
+//   executionRolePolicy.Properties.PolicyDocument.Statement.push({
+//     "Action": [
+//       "ecr:BatchCheckLayerAvailability",
+//       "ecr:GetDownloadUrlForLayer",
+//       "ecr:BatchGetImage"
+//     ],
+//     "Effect": "Allow",
+//     "Resource": {
+//       "Fn::Join": [
+//         "",
+//         [
+//           "arn:",
+//           {
+//             "Ref": "AWS::Partition"
+//           },
+//           ":ecr:",
+//           {
+//             "Ref": "AWS::Region"
+//           },
+//           `:%%SOLUTION_ECR_ACCOUNT%%:repository/%%SOLUTION_ECR_REPO_NAME%%`
+//         ]
+//       ]
+//     }
+//   });
+// }
 
 function getResourcesByType(template, resourceType) {
   const resources = [];
