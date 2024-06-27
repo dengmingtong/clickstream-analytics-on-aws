@@ -356,8 +356,8 @@ do_replace "*.template.json" %%TEMPLATE_OUTPUT_BUCKET%% ${TEMPLATE_OUTPUT_BUCKET
 # do_replace "*.template.json" %%SOLUTION_ECR_ACCOUNT%% ${SOLUTION_ECR_ACCOUNT}
 # do_replace "*.template.json" %%SOLUTION_ECR_REPO_NAME%% ${SOLUTION_ECR_REPO_NAME}
 # do_replace "*.template.json" %%SOLUTION_ECR_BUILD_VERSION%% ${SOLUTION_ECR_BUILD_VERSION}
-do_replace "*.template.json" %%PUBLIC_ECR_REGISTRY%% ${$PUBLIC_ECR_REGISTRY}
-do_replace "*.template.json" %%PUBLIC_ECR_TAG%% ${$PUBLIC_ECR_TAG}
+do_replace "*.template.json" %%PUBLIC_ECR_REGISTRY%% ${PUBLIC_ECR_REGISTRY}
+do_replace "*.template.json" %%PUBLIC_ECR_TAG%% ${PUBLIC_ECR_TAG}
 
 
 for cn_template in ${SOLUTION_CN_TEMPLATES[@]}; do 
