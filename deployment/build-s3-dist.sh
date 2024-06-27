@@ -93,6 +93,14 @@ do_replace()
     do_cmd sedi $replace $file
 }
 
+#handle special case that in $3 has '/'
+do_replace_1() 
+{
+    replace="s#$2#$3#g"
+    file=$1
+    do_cmd sedi $replace $file
+}
+
 create_template_json() 
 {
     do_cmd npm install -g pnpm@8.15.3
@@ -356,7 +364,7 @@ do_replace "*.template.json" %%TEMPLATE_OUTPUT_BUCKET%% ${TEMPLATE_OUTPUT_BUCKET
 # do_replace "*.template.json" %%SOLUTION_ECR_ACCOUNT%% ${SOLUTION_ECR_ACCOUNT}
 # do_replace "*.template.json" %%SOLUTION_ECR_REPO_NAME%% ${SOLUTION_ECR_REPO_NAME}
 # do_replace "*.template.json" %%SOLUTION_ECR_BUILD_VERSION%% ${SOLUTION_ECR_BUILD_VERSION}
-do_replace "*.template.json" %%PUBLIC_ECR_REGISTRY%% ${PUBLIC_ECR_REGISTRY}
+do_replace_1 "*.template.json" %%PUBLIC_ECR_REGISTRY%% ${PUBLIC_ECR_REGISTRY}
 do_replace "*.template.json" %%PUBLIC_ECR_TAG%% ${PUBLIC_ECR_TAG}
 
 
