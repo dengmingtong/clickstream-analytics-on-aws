@@ -17,25 +17,19 @@ import os
 # application type, you can switch to `enums.Application.Shopping` to send shopping events.
 APP_TYPE = enums.Application.Shopping
 
-# for history event consts
-DURATION_OF_DAYS = 30
-PER_ACTION_DURATION = range(3, 60)
-EVENTS_PER_REQUEST = 10000
-MAX_BATCH_REQUEST_NUMBER = 20
-# gzip process number, for mac m1 is 8, for c5.metal is 50 to meet best performance
-PROCESS_NUMBER = 50
-# control the speed for event send.
-MAX_UPLOAD_THREAD_NUMBER = 10
-REQUEST_SLEEP_TIME = 0.1
-GZIP_TIMES_PER_DAY = 1
-
-# for real-time event consts
-ALL_USER_REALTIME = 100000
-RANDOM_DAU_REALTIME = range(10000, 20000)
-THREAD_NUMBER_FOR_USER = 10
-FLUSH_DURATION = 10
-BATCH_EVENT_DURATION_IN_MINUTES = 20
-IS_LOG_FULL_REQUEST_MESSAGE = True
+# for performance tool
+ALL_USER_REALTIME_PERFORMANCE = 1000000
+RANDOM_DAU_PERFORMANCE = range(100000, 100001)
+THREAD_NUMBER_FOR_USER_PERFORMANCE = 1
+FLUSH_DURATION_PERFORMANCE = 3
+BATCH_EVENT_DURATION_IN_MINUTES_PERFORMANCE = 2
+NEED_SLEEP = True
+# 100 RPS
+# PERFORMANCE_SLEEP_TIME = 0.005
+# 10 RPS
+# PERFORMANCE_SLEEP_TIME = 0.08
+# 1000 RPS
+PERFORMANCE_SLEEP_TIME = 0.003
 
 # common settings
 SESSION_TIMES = range(1, 4)
@@ -59,7 +53,6 @@ DEFAULT_PRODUCT_COUNT = 2
 # following value will be replaced by amplifyconfiguration.json file.
 APP_ID = ""
 ENDPOINT = ""
-
 
 def init_config():
     script_dir = os.path.dirname(os.path.abspath(__file__))

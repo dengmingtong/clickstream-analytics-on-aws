@@ -23,9 +23,6 @@ global_current_time = utils.current_timestamp()
 global_total_events_for_duration = 0
 global_total_users_for_duration = 0
 app_provider = AppProvider()
-# left_users = []
-# left_events = []
-
 
 def init_all_user():
     user_list = []
