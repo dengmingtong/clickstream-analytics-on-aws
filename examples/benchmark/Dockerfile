@@ -6,17 +6,21 @@ WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY standalone-data-generator/ /app
-COPY . /app
+COPY benchmark-entrypoint.sh /app
+COPY create_event_for_benchmark.py /app
+COPY configure.py /app
+COPY requirements.txt /app
+COPY amplifyconfiguration.json /app
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Make the entrypoint script executable
-RUN chmod +x /app/performance-entrypoint.sh
+RUN chmod +x /app/benchmark-entrypoint.sh
 
 RUN ls -la /app
 
 # Set the default command to run when the container starts
-CMD ["python", "create_event_for_performance.py"]
+CMD ["python", "create_event_for_benchmark.py"]
 
-ENTRYPOINT [ "/app/performance-entrypoint.sh" ]   
+ENTRYPOINT [ "/app/benchmark-entrypoint.sh" ]   

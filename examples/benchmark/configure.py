@@ -17,7 +17,7 @@ import os
 # application type, you can switch to `enums.Application.Shopping` to send shopping events.
 APP_TYPE = enums.Application.Shopping
 
-# for performance tool
+# for benchmark tool
 ALL_USER_REALTIME_PERFORMANCE = 1000000
 RANDOM_DAU_PERFORMANCE = range(100000, 100001)
 THREAD_NUMBER_FOR_USER_PERFORMANCE = 1

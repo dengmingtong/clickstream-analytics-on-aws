@@ -104,12 +104,14 @@ FULL_IMAGE_NAME="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REP
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
 echo "requests~=2.28.2" > requirements.txt
-ln -s ../standalone-data-generator standalone-data-generator
+cp -rf ../standalone-data-generator standalone-data-generator
+
+sleep 10
 
 # Build your Docker image locally
 docker build -t $IMAGE_NAME -f $DOCKERFILE_PATH .
 
-rm standalone-data-generator
+rm -rf standalone-data-generator
 rm -f requirements.txt
 
 # Check if ECR repository exists
